@@ -10,14 +10,14 @@ const Landing = ({ onLogout }) => {
       title: "Project Dashboard",
       description: "Manage your haunted code repositories and spirits",
       path: "/projects",
-      color: "from-purple-900 to-indigo-900"
+      color: "from-purple-900 to-blue-900"
     },
     {
       icon: <Code className="w-8 h-8" />,
       title: "Spirit Editor",
       description: "Write code with haunted AI assistance",
       path: "/project/1/code",
-      color: "from-green-900 to-emerald-900"
+      color: "from-green-900 to-gray-800"
     },
     {
       icon: <Settings className="w-8 h-8" />,
@@ -31,35 +31,35 @@ const Landing = ({ onLogout }) => {
       title: "NecroDiff",
       description: "Haunted code comparison with spirit commentary",
       path: "/necrodiff",
-      color: "from-red-900 to-pink-900"
+      color: "from-red-900 to-purple-900"
     },
     {
       icon: <Skull className="w-8 h-8" />,
       title: "Time Cemetery",
       description: "Commit history as haunted gravestones",
       path: "/graveyard",
-      color: "from-gray-900 to-slate-900"
+      color: "from-gray-900 to-gray-700"
     },
     {
       icon: <Zap className="w-8 h-8" />,
       title: "Merge Ritual",
       description: "Resolve conflicts through dark magic",
       path: "/ritual",
-      color: "from-orange-900 to-amber-900"
+      color: "from-orange-900 to-amber-700"
     },
     {
       icon: <Ghost className="w-8 h-8" />,
       title: "NecroTerminal",
       description: "Possessed command line interface",
       path: "/terminal",
-      color: "from-lime-900 to-green-900"
+      color: "from-lime-900 to-green-700"
     },
     {
       icon: <Scan className="w-8 h-8" />,
       title: "QR Summons",
       description: "Summon spirits with ancient symbols",
       path: "/qr",
-      color: "from-violet-900 to-purple-900"
+      color: "from-violet-900 to-purple-700"
     }
   ];
 
