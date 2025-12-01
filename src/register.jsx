@@ -1,474 +1,262 @@
+// pages/Register.jsx
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { authService } from './services';
+import { Link } from 'react-router-dom';
+import { Eye, EyeOff, Ghost, Skull, Zap } from 'lucide-react';
 
-const Register = () => {
+const Register = ({ onLogin }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'vendor',
-    organization: '',
-    location: ''
+    acceptTerms: false
   });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Modern color palette
-  const colors = {
-    primary: '#2563eb',
-    primaryDark: '#1d4ed8',
-    secondary: '#64748b',
-    light: '#f8fafc',
-    dark: '#1e293b',
-    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    gradientDark: 'linear-gradient(135deg, #5a6fd8 0%, #6a4196 100%)',
-    error: '#dc2626',
-    success: '#10b981'
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // Simulate registration process
+    setTimeout(() => {
+      // Auto-login after registration
+      onLogin('fake_jwt_token_here');
+      setIsLoading(false);
+    }, 2000);
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      await authService.register(formData);
-      navigate('/login');
-    } catch (error) {
-      setError(error.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Role descriptions for better UX
-  const roleDescriptions = {
-    vendor: 'Create material batches and generate QR codes',
-    depot: 'Manage inventory and track material movements',
-    installation: 'Scan and record material installations',
-    inspector: 'Perform quality control and verification'
-  };
-
-  // Styles
-  const containerStyle = {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '20px',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-  };
-
-  const formContainerStyle = {
-    background: 'rgba(255, 255, 255, 0.95)',
-    padding: '60px 50px',
-    borderRadius: '24px',
-    boxShadow: `
-      0 25px 50px -12px rgba(0, 0, 0, 0.15),
-      0 0 0 1px rgba(0, 0, 0, 0.05)
-    `,
-    width: '100%',
-    maxWidth: '520px',
-    backdropFilter: 'blur(16px)',
-    border: '1px solid rgba(255, 255, 255, 0.4)',
-    position: 'relative',
-    overflow: 'hidden'
-  };
-
-  const decorationStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '6px',
-    background: colors.gradient,
-    borderRadius: '24px 24px 0 0'
-  };
-
-  const titleStyle = {
-    textAlign: 'center',
-    marginBottom: '10px',
-    fontSize: '2.5rem',
-    fontWeight: '800',
-    background: `linear-gradient(135deg, ${colors.dark} 0%, ${colors.primary} 100%)`,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    lineHeight: '1.2',
-    letterSpacing: '-0.02em'
-  };
-
-  const subtitleStyle = {
-    textAlign: 'center',
-    color: colors.secondary,
-    fontSize: '1.1rem',
-    marginBottom: '40px',
-    fontWeight: '400'
-  };
-
-  const formGroupStyle = {
-    marginBottom: '24px',
-    position: 'relative'
-  };
-
-  const labelStyle = {
-    display: 'block',
-    marginBottom: '10px',
-    color: colors.dark,
-    fontWeight: '600',
-    fontSize: '0.95rem',
-    letterSpacing: '0.5px'
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: '16px 20px',
-    border: `2px solid #e2e8f0`,
-    borderRadius: '12px',
-    fontSize: '1rem',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    background: 'rgba(255, 255, 255, 0.8)',
-    boxSizing: 'border-box',
-    fontWeight: '500',
-    color: colors.dark
-  };
-
-  const selectStyle = {
-    ...inputStyle,
-    cursor: 'pointer',
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-    backgroundPosition: 'right 16px center',
-    backgroundRepeat: 'no-repeat',
-    backgroundSize: '20px'
-  };
-
-  const buttonStyle = {
-    width: '100%',
-    padding: '18px',
-    background: colors.gradient,
-    color: 'white',
-    border: 'none',
-    borderRadius: '12px',
-    fontSize: '1.1rem',
-    fontWeight: '700',
-    cursor: 'pointer',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    marginTop: '10px',
-    letterSpacing: '0.5px',
-    position: 'relative',
-    overflow: 'hidden'
-  };
-
-  const errorStyle = {
-    background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-    color: colors.error,
-    padding: '16px',
-    borderRadius: '12px',
-    marginBottom: '25px',
-    textAlign: 'center',
-    fontWeight: '600',
-    fontSize: '0.95rem',
-    border: `1px solid ${colors.error}20`,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px'
-  };
-
-  const linkStyle = {
-    color: colors.primary,
-    textDecoration: 'none',
-    fontWeight: '600',
-    transition: 'all 0.3s ease',
-    fontSize: '1rem'
-  };
-
-  const footerStyle = {
-    textAlign: 'center',
-    marginTop: '35px',
-    paddingTop: '25px',
-    borderTop: `1px solid rgba(0, 0, 0, 0.1)`,
-    color: colors.secondary,
-    fontSize: '0.95rem'
-  };
-
-  const roleDescriptionStyle = {
-    fontSize: '0.85rem',
-    color: colors.secondary,
-    marginTop: '6px',
-    fontStyle: 'italic',
-    padding: '8px 12px',
-    background: 'rgba(37, 99, 235, 0.05)',
-    borderRadius: '8px',
-    borderLeft: `3px solid ${colors.primary}`
-  };
-
-  const focusStyle = (e) => {
-    e.target.style.borderColor = colors.primary;
-    e.target.style.background = 'rgba(37, 99, 235, 0.03)';
-    e.target.style.boxShadow = `0 0 0 3px ${colors.primary}15`;
-  };
-
-  const blurStyle = (e) => {
-    e.target.style.borderColor = '#e2e8f0';
-    e.target.style.background = 'rgba(255, 255, 255, 0.8)';
-    e.target.style.boxShadow = 'none';
-  };
-
-  const getRoleIcon = (role) => {
-    const icons = {
-      vendor: '🏭',
-      depot: '📦',
-      installation: '🔧',
-      inspector: '✅'
-    };
-    return icons[role] || '👤';
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   return (
-    <div style={containerStyle}>
-      <div style={formContainerStyle}>
-        <div style={decorationStyle}></div>
-        
-        <div>
-          <h2 style={titleStyle}>Join QR TrackPro</h2>
-          <p style={subtitleStyle}>
-            Create your account and start tracking materials efficiently
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          {/* Personal Information */}
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>
-              👤 Full Name
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              placeholder="Enter your full name"
-              style={inputStyle}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
-            />
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>
-              📧 Email Address
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="Enter your work email"
-              style={inputStyle}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
-            />
-          </div>
-
-          {/* Role Selection */}
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>
-              💼 Your Role
-            </label>
-            <select 
-              name="role" 
-              value={formData.role} 
-              onChange={handleChange}
-              style={selectStyle}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
-            >
-              <option value="vendor">🏭 Vendor</option>
-              <option value="depot">📦 Depot Staff</option>
-              <option value="installation">🔧 Installation Crew</option>
-              <option value="inspector">✅ Inspector</option>
-              <option value="maintenance">✅ Maintenance Crew</option>
-            </select>
-            <div style={roleDescriptionStyle}>
-              {getRoleIcon(formData.role)} {roleDescriptions[formData.role]}
-            </div>
-          </div>
-
-          {/* Organization Information */}
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>
-              🏢 Organization
-            </label>
-            <input
-              type="text"
-              name="organization"
-              value={formData.organization}
-              onChange={handleChange}
-              required
-              placeholder="Enter your organization name"
-              style={inputStyle}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
-            />
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>
-              📍 Location
-            </label>
-            <input
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              required
-              placeholder="Enter your location/city"
-              style={inputStyle}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
-            />
-          </div>
-
-          {/* Password Fields */}
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>
-              🔒 Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Create a strong password"
-              style={inputStyle}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
-            />
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>
-              🔑 Confirm Password
-            </label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              placeholder="Re-enter your password"
-              style={inputStyle}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
-            />
-          </div>
-
-          {error && (
-            <div style={errorStyle}>
-              <span style={{fontSize: '1.2rem'}}>⚠️</span>
-              {error}
-            </div>
-          )}
-
-          <button 
-            type="submit" 
-            disabled={loading}
-            style={{
-              ...buttonStyle,
-              opacity: loading ? 0.8 : 1,
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.target.style.transform = 'translateY(-3px)';
-                e.target.style.boxShadow = `0 12px 30px ${colors.primary}40`;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'none';
-              }
-            }}
-          >
-            {loading ? (
-              <>
-                <span style={{
-                  display: 'inline-block',
-                  animation: 'spin 1s linear infinite',
-                  marginRight: '10px'
-                }}>🔄</span>
-                Creating your account...
-              </>
-            ) : (
-              <>
-                🎯 Create Account & Get Started
-              </>
-            )}
-          </button>
-        </form>
-
-        <div style={footerStyle}>
-          <p style={{margin: 0}}>
-            Already have an account?{' '}
-            <Link 
-              to="/login" 
-              style={linkStyle}
-              onMouseEnter={(e) => {
-                e.target.style.color = colors.primaryDark;
-                e.target.style.textDecoration = 'underline';
-                e.target.style.transform = 'translateX(2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.color = colors.primary;
-                e.target.style.textDecoration = 'none';
-                e.target.style.transform = 'translateX(0)';
-              }}
-            >
-              Sign in to your account
-            </Link>
-          </p>
-        </div>
-
-        <style>
-          {`
-            @keyframes spin {
-              from { transform: rotate(0deg); }
-              to { transform: rotate(360deg); }
-            }
-            
-            input::placeholder, select::placeholder {
-              color: #94a3b8;
-              font-weight: 400;
-            }
-            
-            input:focus, select:focus {
-              outline: none;
-            }
-          `}
-        </style>
+    <div className="min-h-screen bg-black text-gray-300 relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute w-full h-full bg-gradient-to-br from-green-900 via-purple-900 to-black animate-pulse"></div>
       </div>
+
+      {/* Floating Elements */}
+      <div className="absolute top-20 left-10 text-4xl opacity-20 animate-bounce">🧟</div>
+      <div className="absolute top-40 right-20 text-3xl opacity-30 animate-pulse">⚡</div>
+      <div className="absolute bottom-32 left-20 text-5xl opacity-15 animate-float">👻</div>
+
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-6xl font-bold mb-4" style={{ fontFamily: "'Creepster', cursive" }}>
+              SUMMON SPIRIT
+            </h1>
+            <p className="text-xl text-purple-400 italic" style={{ fontFamily: "'Eater', cursive" }}>
+              Join the Haunted Developer Coven
+            </p>
+          </div>
+
+          {/* Registration Form */}
+          <div className="bg-gray-900/90 backdrop-blur-sm border-2 border-green-700 rounded-xl p-8 shadow-2xl shadow-green-900/50">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Username */}
+              <div>
+                <label className="block text-white font-bold mb-2" style={{ fontFamily: "'Creepster', cursive" }}>
+                  SPIRIT NAME
+                </label>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="Ancient_Coder"
+                  className="w-full bg-black/50 border-2 border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-green-600 focus:outline-none transition-colors"
+                  required
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-white font-bold mb-2" style={{ fontFamily: "'Creepster', cursive" }}>
+                  SPIRIT IDENTIFIER
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="new.sorcerer@qripocalypse.com"
+                  className="w-full bg-black/50 border-2 border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-green-600 focus:outline-none transition-colors"
+                  required
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-white font-bold mb-2" style={{ fontFamily: "'Creepster', cursive" }}>
+                  SECRET INCANTATION
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="••••••••••••"
+                    className="w-full bg-black/50 border-2 border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-green-600 focus:outline-none transition-colors pr-12"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-white font-bold mb-2" style={{ fontFamily: "'Creepster', cursive" }}>
+                  CONFIRM INCANTATION
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="••••••••••••"
+                    className="w-full bg-black/50 border-2 border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-green-600 focus:outline-none transition-colors pr-12"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Terms */}
+              <div>
+                <label className="flex items-start space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="acceptTerms"
+                    checked={formData.acceptTerms}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-green-600 bg-gray-800 border-gray-700 rounded focus:ring-green-500 focus:ring-2 mt-1 flex-shrink-0"
+                    required
+                  />
+                  <span className="text-gray-400 text-sm">
+                    I accept the{' '}
+                    <Link to="/terms" className="text-green-400 hover:text-green-300 underline">
+                      Ancient Coven Agreement
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="/privacy" className="text-green-400 hover:text-green-300 underline">
+                      Spirit Privacy Protocol
+                    </Link>
+                  </span>
+                </label>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading || !formData.acceptTerms}
+                className="w-full bg-gradient-to-r from-green-900 to-purple-900 hover:from-green-800 hover:to-purple-800 text-white py-4 rounded-lg font-bold text-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-green-700"
+                style={{ fontFamily: "'Creepster', cursive" }}
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="animate-spin">⚡</span>
+                    PERFORMING SUMMONING RITUAL...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <Zap size={20} />
+                    SUMMON SPIRIT
+                    <Ghost size={20} />
+                  </span>
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-700"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-900 text-gray-400">QUICK SUMMONING</span>
+              </div>
+            </div>
+
+            {/* OAuth Buttons */}
+            <div className="space-y-3">
+              <button className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-3 border border-gray-700">
+                <span className="text-2xl">🔮</span>
+                GitHub Spirit
+              </button>
+              <button className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-3 border border-gray-700">
+                <span className="text-2xl">⚡</span>
+                Google Ghost
+              </button>
+            </div>
+
+            {/* Login Link */}
+            <div className="text-center mt-6">
+              <p className="text-gray-400">
+                Already possessed?{' '}
+                <Link to="/login" className="text-green-400 hover:text-green-300 font-bold transition-colors">
+                  Enter the crypt
+                </Link>
+              </p>
+            </div>
+          </div>
+
+          {/* Benefits */}
+          <div className="mt-8 grid grid-cols-2 gap-4 text-center">
+            <div className="bg-purple-900/30 rounded-lg p-4">
+              <div className="text-2xl mb-2">🧛</div>
+              <p className="text-xs text-purple-300">Haunted Code Reviews</p>
+            </div>
+            <div className="bg-green-900/30 rounded-lg p-4">
+              <div className="text-2xl mb-2">🔮</div>
+              <p className="text-xs text-green-300">AI Spirit Assistant</p>
+            </div>
+            <div className="bg-red-900/30 rounded-lg p-4">
+              <div className="text-2xl mb-2">⚰️</div>
+              <p className="text-xs text-red-300">Commit Cemetery</p>
+            </div>
+            <div className="bg-blue-900/30 rounded-lg p-4">
+              <div className="text-2xl mb-2">👻</div>
+              <p className="text-xs text-blue-300">Ghost Collaboration</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Eater&display=swap');
+        
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 };
