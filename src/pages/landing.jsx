@@ -73,6 +73,33 @@ const Landing = ({ onLogout }) => {
     onLogout();
   };
 
+  const choose = () => {
+    const spooky = [
+      { 
+        title: "You Have Returned…", 
+        subtitle: (name) => `Master ${name}, the shadows have been waiting.` 
+      },
+      { 
+        title: "The Veil Opens Once More…", 
+        subtitle: (name) => `Master ${name}, your presence stirs the restless spirits.` 
+      },
+      { 
+        title: "The Darkness Welcomes You Back…", 
+        subtitle: (name) => `Master ${name}… we've been dying to see you.` 
+      },
+      { 
+        title: "Welcome Back to the Realm…", 
+        subtitle: (name) => `Master ${name}, your throne grows cold without you.` 
+      }
+    ];
+
+    const randomIndex = Math.floor(Math.random() * spooky.length);
+
+    return spooky[randomIndex];
+  };
+
+  const greeting = choose();
+
   return (
     <div className="min-h-screen bg-black text-gray-300 relative overflow-hidden">
       {/* Animated Background */}
@@ -92,10 +119,10 @@ const Landing = ({ onLogout }) => {
             <div className="text-4xl">⚰️</div>
             <div>
               <h1 className="text-4xl font-bold text-white" style={{ fontFamily: "'Creepster', cursive" }}>
-                You Have Returned…
+                {greeting.title}
               </h1>
               <p className="text-purple-400 italic" style={{ fontFamily: "'Eater', cursive" }}>
-                Master {user.name}, the shadows have been waiting.
+                {greeting.subtitle(user.name)}
               </p>
             </div>
           </div>
@@ -125,11 +152,10 @@ const Landing = ({ onLogout }) => {
           </h1>
           <p className="text-2xl text-purple-400 mb-8 italic" 
               style={{ fontFamily: "'Eater', cursive" }}>
-            Where Code Dies and Returns
+            Where Repos Rise and Pipelines Perform Forbidden Rituals
           </p>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-12">
-            A haunted Git forge where monsters, ghosts, and cursed diffs roam free. 
-            Enter if you dare to merge with the afterlife.
+            A haunted realm where ghost code materializes from the void, cursed diffs wander freely, commits whisper in the dark, afterlife merges twist reality, images mutate, and deployments crawl back… not quite alive, not quite dead.
           </p>
           
           <div className="flex gap-6 justify-center">
