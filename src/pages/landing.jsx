@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Ghost, GitBranch, Zap, Skull, Scan, Folder, Code, Settings, LogOut, User } from 'lucide-react';
+import WatchingGhost from '../components/WatchingGhost';
 
 const Landing = ({ onLogout }) => {
   const features = [
@@ -100,8 +101,89 @@ const Landing = ({ onLogout }) => {
 
   const greeting = choose();
 
+  // Load activity data from tracker.json
+  const [activityData, setActivityData] = React.useState([]);
+  
+  React.useEffect(() => {
+    fetch('/data/tracker.json')
+      .then(res => res.json())
+      .then(data => setActivityData(data.activities))
+      .catch(err => console.error('Error loading tracker data:', err));
+  }, []);
+
+  // Generate calendar data for year 2025
+  const generateCalendarData = () => {
+    const weeks = [];
+    const year = 2025;
+    
+    // Start from January 1, 2025
+    const startDate = new Date(year, 0, 1);
+    // End at December 31, 2025
+    const endDate = new Date(year, 11, 31);
+    
+    // Start from the beginning of the week containing Jan 1
+    const currentDate = new Date(startDate);
+    currentDate.setDate(currentDate.getDate() - currentDate.getDay());
+    
+    // Count activities per date
+    const activityCount = {};
+    activityData.forEach(activity => {
+      const date = activity.date;
+      activityCount[date] = (activityCount[date] || 0) + 1;
+    });
+    
+    while (currentDate <= endDate || currentDate.getDay() !== 0) {
+      const week = [];
+      for (let i = 0; i < 7; i++) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const count = activityCount[dateStr] || 0;
+        
+        // Determine level based on activity count
+        let level = 0;
+        if (count > 0) level = 1;
+        if (count >= 2) level = 2;
+        if (count >= 4) level = 3;
+        if (count >= 6) level = 4;
+        
+        week.push({
+          date: dateStr,
+          level: level,
+          count: count
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      weeks.push(week);
+    }
+    
+    return weeks;
+  };
+
+  const calendarWeeks = generateCalendarData();
+  
+  // Calculate stats
+  const totalActiveDays = calendarWeeks.flat().filter(day => day.level > 0).length;
+  const calculateMaxStreak = () => {
+    let maxStreak = 0;
+    let currentStreak = 0;
+    calendarWeeks.flat().forEach(day => {
+      if (day.level > 0) {
+        currentStreak++;
+        maxStreak = Math.max(maxStreak, currentStreak);
+      } else {
+        currentStreak = 0;
+      }
+    });
+    return maxStreak;
+  };
+  const maxStreak = calculateMaxStreak();
+  
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
   return (
     <div className="min-h-screen bg-black text-gray-300 relative overflow-hidden">
+      {/* Watching Ghost */}
+      <WatchingGhost />
+      
       {/* Background Image */}
       <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30" 
            style={{ backgroundImage: "url('https://tse1.mm.bing.net/th/id/OIP.HVzCGwV8haVWCouh_1B9GAHaLH?rs=1&pid=ImgDetMain&o=7&rm=3')" }}>
@@ -208,6 +290,97 @@ const Landing = ({ onLogout }) => {
           </div>
         </div>
 
+        {/* Calendar Section */}
+        <div className="bg-gray-900/80 backdrop-blur-sm border-2 border-purple-700 rounded-xl p-6 mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-3xl font-bold text-white" style={{ fontFamily: "'Creepster', cursive" }}>
+              📅 CALENDAR - 2025
+            </h2>
+            <div className="text-gray-400 text-sm flex items-center gap-4">
+              <span>Total active days: <span className="text-white font-bold">{totalActiveDays}</span></span>
+              <span className="relative">
+                <span className="blood-drip text-red-500 font-bold" style={{ fontFamily: "'Creepster', cursive" }}>
+                  Max streak: {maxStreak}
+                </span>
+              </span>
+            </div>
+          </div>
+          
+          <div className="w-full">
+            {/* Month labels */}
+            <div className="flex mb-2">
+              <div className="w-12"></div>
+              <div className="flex-1 flex justify-between px-1">
+                {months.map((month, idx) => (
+                  <div key={idx} className="text-xs text-gray-500">
+                    {month}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Calendar grid */}
+            <div className="flex">
+              {/* Day labels */}
+              <div className="flex flex-col justify-between text-xs text-gray-500 w-12 pr-2">
+                <div>Mon</div>
+                <div>Wed</div>
+                <div>Fri</div>
+              </div>
+              
+              {/* Weeks grid - full width */}
+              <div className="flex-1 flex gap-[2px]">
+                {calendarWeeks.map((week, weekIdx) => (
+                  <div key={weekIdx} className="flex flex-col gap-[2px] flex-1">
+                    {week.map((day, dayIdx) => {
+                      const levelColors = [
+                        'bg-gray-800',           // level 0 - no activity
+                        'bg-red-900/50',         // level 1 - low activity
+                        'bg-red-800/70',         // level 2 - medium activity
+                        'bg-red-700/90',         // level 3 - high activity
+                        'bg-red-600'             // level 4 - very high activity
+                      ];
+                      
+                      return (
+                        <div
+                          key={dayIdx}
+                          className={`w-full aspect-square rounded-sm ${levelColors[day.level]} hover:ring-1 hover:ring-purple-500 cursor-pointer transition-all flex items-center justify-center relative`}
+                          title={`${day.date}: ${day.count} activities`}
+                        >
+                          {day.level > 0 && (
+                            <span className="text-white text-[10px] opacity-90">💀</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Legend */}
+            <div className="flex items-center justify-end gap-2 mt-4 text-xs text-gray-500">
+              <span>Less</span>
+              <div className="flex gap-1">
+                <div className="w-3 h-3 bg-gray-800 rounded-sm"></div>
+                <div className="w-3 h-3 bg-red-900/50 rounded-sm flex items-center justify-center">
+                  <span className="text-[8px]">💀</span>
+                </div>
+                <div className="w-3 h-3 bg-red-800/70 rounded-sm flex items-center justify-center">
+                  <span className="text-[8px]">💀</span>
+                </div>
+                <div className="w-3 h-3 bg-red-700/90 rounded-sm flex items-center justify-center">
+                  <span className="text-[8px]">💀</span>
+                </div>
+                <div className="w-3 h-3 bg-red-600 rounded-sm flex items-center justify-center">
+                  <span className="text-[8px]">💀</span>
+                </div>
+              </div>
+              <span>More</span>
+            </div>
+          </div>
+        </div>
+
         {/* Recent Activity */}
         <div className="bg-gray-900/80 backdrop-blur-sm border-2 border-blue-700 rounded-xl p-6 mb-12">
           <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
@@ -260,7 +433,7 @@ const Landing = ({ onLogout }) => {
         </div>
 
         {/* Quick Actions Footer */}
-        <div className="bg-gray-900/80 backdrop-blur-sm border-2 border-green-700 rounded-xl p-6 text-center">
+        <div className="bg-gray-900/80 backdrop-blur-sm border-2 border-green-700 rounded-xl p-6 text-center mb-12">
           <h3 className="text-2xl font-bold text-green-400 mb-4" style={{ fontFamily: "'Creepster', cursive" }}>
             NEED IMMEDIATE ASSISTANCE?
           </h3>
@@ -318,6 +491,57 @@ const Landing = ({ onLogout }) => {
         @keyframes glitch-pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.8; }
+        }
+        
+        .blood-drip {
+          position: relative;
+          display: inline-block;
+          text-shadow: 
+            0 0 10px #dc2626,
+            0 0 20px #dc2626,
+            0 2px 4px rgba(220, 38, 38, 0.5);
+          animation: blood-flow 3s ease-in-out infinite;
+        }
+        
+        .blood-drip::after {
+          content: '';
+          position: absolute;
+          bottom: -8px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 4px;
+          height: 8px;
+          background: linear-gradient(to bottom, #dc2626, transparent);
+          border-radius: 0 0 50% 50%;
+          animation: drip 3s ease-in-out infinite;
+        }
+        
+        @keyframes blood-flow {
+          0%, 100% { 
+            filter: brightness(1);
+            text-shadow: 
+              0 0 10px #dc2626,
+              0 0 20px #dc2626,
+              0 2px 4px rgba(220, 38, 38, 0.5);
+          }
+          50% { 
+            filter: brightness(1.3);
+            text-shadow: 
+              0 0 15px #dc2626,
+              0 0 30px #dc2626,
+              0 4px 8px rgba(220, 38, 38, 0.8);
+          }
+        }
+        
+        @keyframes drip {
+          0%, 100% { 
+            height: 8px;
+            opacity: 0.8;
+          }
+          50% { 
+            height: 12px;
+            opacity: 1;
+          }
         }
       `}</style>
     </div>

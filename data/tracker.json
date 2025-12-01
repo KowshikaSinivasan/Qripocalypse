@@ -1,0 +1,16 @@
+{
+  "activities": [
+    {
+      "id": 1,
+      "date": "2025-12-01",
+      "time": "14:30:00",
+      "activity": "Started working on project"
+    },
+    {
+      "id": 2,
+      "date": "2025-12-01",
+      "time": "15:45:00",
+      "activity": "Completed feature implementation"
+    }
+  ]
+}
