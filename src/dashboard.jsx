@@ -1,60 +1,19 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Folder, GitBranch, Users, Settings, Zap, Search, Trash2 } from 'lucide-react';
 import WatchingGhost from './components/WatchingGhost';
+import { useProjects } from './components/projectContext';
 
 const ProjectDashboard = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
-  const [projectsList, setProjectsList] = useState([
-    {
-      id: 1,
-      name: 'Ancient-Spells',
-      description: 'Collection of dark magic incantations and rituals',
-      type: 'JavaScript',
-      lastUpdated: '2 hours ago',
-      collaborators: 3,
-      branches: 2,
-      status: 'active',
-      ghost: '🧙‍♀️'
-    },
-    {
-      id: 2,
-      name: 'Necro-API',
-      description: 'REST API for communicating with the spirit world',
-      type: 'Python',
-      lastUpdated: '1 day ago',
-      collaborators: 5,
-      branches: 3,
-      status: 'active',
-      ghost: '👻'
-    },
-    {
-      id: 3,
-      name: 'Haunted-UI',
-      description: 'React components for possessed user interfaces',
-      type: 'TypeScript',
-      lastUpdated: '3 days ago',
-      collaborators: 2,
-      branches: 1,
-      status: 'active',
-      ghost: '🧛'
-    },
-    {
-      id: 4,
-      name: 'Crypt-Keeper',
-      description: 'Database management for ancient knowledge',
-      type: 'Go',
-      lastUpdated: '1 week ago',
-      collaborators: 1,
-      branches: 1,
-      status: 'inactive',
-      ghost: '💀'
-    }
-  ]);
+  
+  // Use the projects from context
+  const { projectsList, setProjectsList } = useProjects();
 
   const filteredProjects = projectsList.filter(project =>
     project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -68,9 +27,95 @@ const ProjectDashboard = () => {
     setTimeout(() => setShowDeleteSuccess(false), 3000);
   };
 
+  const handleCreateProject = (newProject) => {
+    const id = projectsList.length > 0 ? Math.max(...projectsList.map(p => p.id)) + 1 : 1;
+    const projectWithFiles = {
+      ...newProject,
+      id,
+      status: 'active',
+      ghost: getGhostEmoji(newProject.type),
+      lastUpdated: 'Just now',
+      collaborators: 1,
+      branches: 1,
+      files: getDefaultFiles(newProject.name, newProject.type, newProject.template)
+    };
+    
+    setProjectsList([...projectsList, projectWithFiles]);
+    setShowCreateModal(false);
+    
+    // Navigate to the new project
+    navigate(`/project/${id}/code`);
+  };
+
+  const getGhostEmoji = (type) => {
+    const emojis = {
+      'javascript': '👻',
+      'typescript': '🧛',
+      'python': '🐍',
+      'go': '💀',
+      'rust': '🦀',
+      'java': '☕'
+    };
+    return emojis[type] || '👻';
+  };
+
+  const getDefaultFiles = (name, type, template) => {
+    const baseFiles = [
+      { 
+        id: Date.now(), 
+        name: 'README.md', 
+        content: `# ${name}\n\nWelcome to your haunted project!\n\n## Getting Started\n\nStart coding with dark magic...`, 
+        type: 'file', 
+        language: 'markdown', 
+        path: 'README.md' 
+      }
+    ];
+
+    if (template === 'react') {
+      baseFiles.push(
+        { 
+          id: Date.now() + 1, 
+          name: 'package.json', 
+          content: `{\n  "name": "${name.toLowerCase().replace(/\s+/g, '-')}",\n  "version": "1.0.0",\n  "main": "src/index.js",\n  "dependencies": {\n    "react": "^18.2.0",\n    "react-dom": "^18.2.0"\n  }\n}`, 
+          type: 'file', 
+          language: 'json', 
+          path: 'package.json' 
+        },
+        { 
+          id: Date.now() + 2, 
+          name: 'App.js', 
+          content: 'import React from "react";\n\nfunction App() {\n  return (\n    <div className="App">\n      <h1>👻 Welcome to Haunted React!</h1>\n    </div>\n  );\n}\n\nexport default App;', 
+          type: 'file', 
+          language: 'javascript', 
+          path: 'src/App.js' 
+        }
+      );
+    } else if (template === 'node') {
+      baseFiles.push(
+        { 
+          id: Date.now() + 1, 
+          name: 'package.json', 
+          content: `{\n  "name": "${name.toLowerCase().replace(/\s+/g, '-')}",\n  "version": "1.0.0",\n  "main": "index.js",\n  "scripts": {\n    "start": "node index.js"\n  }\n}`, 
+          type: 'file', 
+          language: 'json', 
+          path: 'package.json' 
+        },
+        { 
+          id: Date.now() + 2, 
+          name: 'index.js', 
+          content: 'const express = require("express");\nconst app = express();\n\napp.get("/", (req, res) => {\n  res.json({ message: "Welcome to the Spirit API!" });\n});\n\napp.listen(3000, () => {\n  console.log("Server is haunting on port 3000");\n});', 
+          type: 'file', 
+          language: 'javascript', 
+          path: 'index.js' 
+        }
+      );
+    }
+
+    return baseFiles;
+  };
+
   return (
     <div className="min-h-screen bg-black text-gray-300">
-      {/* Watching Ghost */}
       <WatchingGhost />
       
       <div className="container mx-auto px-4 py-8">
@@ -125,7 +170,6 @@ const ProjectDashboard = () => {
               key={project.id}
               className="bg-gray-900/80 backdrop-blur-sm border-2 border-gray-700 rounded-xl p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-900/30 group relative"
             >
-              {/* Delete Button */}
               <button
                 onClick={(e) => {
                   e.preventDefault();
@@ -171,6 +215,10 @@ const ProjectDashboard = () => {
                     <div className="flex items-center gap-1">
                       <GitBranch size={16} />
                       <span>{project.branches}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Folder size={14} />
+                      <span>{project.files?.length || 0} files</span>
                     </div>
                   </div>
                   <span>{project.lastUpdated}</span>
@@ -237,7 +285,10 @@ const ProjectDashboard = () => {
 
       {/* Create Project Modal */}
       {showCreateModal && (
-        <CreateProjectModal onClose={() => setShowCreateModal(false)} />
+        <CreateProjectModal 
+          onClose={() => setShowCreateModal(false)} 
+          onCreate={handleCreateProject}
+        />
       )}
 
       {/* Upload Project Modal */}
@@ -254,7 +305,8 @@ const ProjectDashboard = () => {
               collaborators: 1,
               branches: 1,
               status: 'active',
-              ghost: '📦'
+              ghost: '📦',
+              files: getDefaultFiles(projectName, 'javascript', 'none')
             };
             setProjectsList([...projectsList, newProject]);
             setShowUploadModal(false);
@@ -289,8 +341,9 @@ const ProjectDashboard = () => {
   );
 };
 
-// Create Project Modal Component
-const CreateProjectModal = ({ onClose }) => {
+// Keep the CreateProjectModal, UploadProjectModal, and DeleteConfirmModal components exactly as they were
+// (they don't need to change)
+const CreateProjectModal = ({ onClose, onCreate }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -301,8 +354,7 @@ const CreateProjectModal = ({ onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle project creation
-    onClose();
+    onCreate(formData);
   };
 
   const handleChange = (e) => {
