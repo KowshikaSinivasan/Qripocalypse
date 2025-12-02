@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Play, Save, GitBranch, Users, Settings, Zap, 
   Folder, File, Plus, Terminal, Bot, Download,
-  Github, RefreshCw, Trash2
+  Github, RefreshCw, Trash2, Edit2, X, Check
 } from 'lucide-react';
 
 // Sample GitHub data for different users/projects
@@ -69,6 +69,11 @@ const CodeEditor = () => {
     }
   });
   const [isCommitting, setIsCommitting] = useState(false);
+  const [fileAction, setFileAction] = useState({ type: null, parentId: null });
+  const [newFileName, setNewFileName] = useState('');
+  const [editingFileId, setEditingFileId] = useState(null);
+  const [editNameValue, setEditNameValue] = useState('');
+  const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
 
   const fileEditorRef = useRef(null);
 
@@ -78,30 +83,48 @@ const CodeEditor = () => {
     localStorage.setItem('modifiedFiles', JSON.stringify(obj));
   }, [modifiedFiles]);
 
+  // Update cursor position when typing
+  const updateCursorPosition = (content) => {
+    if (!content || !fileEditorRef.current) return;
+    
+    const textarea = fileEditorRef.current;
+    const text = content.substring(0, textarea.selectionStart);
+    const lines = text.split('\n');
+    const line = lines.length;
+    const column = lines[lines.length - 1].length + 1;
+    setCursorPosition({ line, column });
+  };
+
   const loadGitHubRepo = (repoName) => {
     const normalizedRepoName = repoName.toLowerCase().trim();
-    
+
     if (SAMPLE_GITHUB_PROJECTS[normalizedRepoName]) {
       const project = SAMPLE_GITHUB_PROJECTS[normalizedRepoName];
-      setFiles(project.files);
+
+      // Deep clone files and attach originalContent
+      const clonedFiles = JSON.parse(JSON.stringify(project.files));
+
+      attachOriginalContent(clonedFiles);
+
+      setFiles(clonedFiles);
       setCurrentRepo(repoName);
       setCollaborators(project.collaborators);
-      
-      // Find first file to set as active
-      const firstFile = findFirstFile(project.files);
-      if (firstFile) {
-        setActiveFile(firstFile.id);
-      }
-      
-      setOutput(`✅ Loaded repository: ${repoName}\n🔮 Project files loaded successfully!`);
-    } else {
-      // Load default random project if repo not found
-      const repos = Object.keys(SAMPLE_GITHUB_PROJECTS);
-      const randomRepo = repos[Math.floor(Math.random() * repos.length)];
-      loadGitHubRepo(randomRepo);
-      setOutput(`⚠️ Repository "${repoName}" not found. Loaded "${randomRepo}" instead.`);
+
+      const firstFile = findFirstFile(clonedFiles);
+      if (firstFile) setActiveFile(firstFile.id);
     }
   };
+
+  function attachOriginalContent(fileList) {
+    for (const file of fileList) {
+      if (file.type === "file") {
+        file.originalContent = file.content;  // save original GitHub content
+      }
+      if (file.children) {
+        attachOriginalContent(file.children);
+      }
+    }
+  }
 
   const findFirstFile = (fileList) => {
     for (const file of fileList) {
@@ -169,17 +192,95 @@ const CodeEditor = () => {
 
   const handleFileChange = (content) => {
     if (!activeFile) return;
-    
-    // Update the modified files map
+
+    const file = getFileContent(activeFile);
+
+    // Compare with original GitHub content
+    const isActuallyModified = content !== file.originalContent;
+
     setModifiedFiles(prev => {
       const newMap = new Map(prev);
-      newMap.set(activeFile.toString(), content);
+
+      if (isActuallyModified) {
+        newMap.set(activeFile.toString(), content);
+      } else {
+        // If user reverts back to original, remove "modified"
+        newMap.delete(activeFile.toString());
+      }
+
       return newMap;
     });
-    
-    // Update files state to trigger re-render
+
     const updatedFiles = updateFileContent(files, activeFile, content);
     setFiles(updatedFiles);
+    updateCursorPosition(content);
+  };
+
+  const createFile = (parentId = null, type = 'file') => {
+    if (!newFileName.trim()) {
+      setFileAction({ type: null, parentId: null });
+      setNewFileName('');
+      return;
+    }
+
+    const newId = Date.now();
+    const newFile = {
+      id: newId,
+      name: newFileName,
+      type: type,
+      content: type === 'file' ? `// New ${type}\n// Created: ${new Date().toLocaleString()}\n// UTF-8 Encoding` : '',
+      language: type === 'file' ? 'javascript' : null,
+      path: newFileName,
+      originalContent: type === 'file' ? `// New ${type}\n// Created: ${new Date().toLocaleString()}\n// UTF-8 Encoding` : ''
+    };
+
+    const updatedFiles = addFileToTree(files, parentId, newFile, type);
+    setFiles(updatedFiles);
+    
+    if (type === 'file') {
+      setActiveFile(newId);
+    }
+
+    setOutput(prev => prev + `✨ Created new ${type}: ${newFileName}\n`);
+    setFileAction({ type: null, parentId: null });
+    setNewFileName('');
+  };
+
+  const deleteFile = (fileId) => {
+    const file = getFileContent(fileId);
+    if (!file) return;
+
+    const updatedFiles = removeFileFromTree(files, fileId);
+    setFiles(updatedFiles);
+
+    // If we deleted the active file, clear it
+    if (activeFile === fileId) {
+      setActiveFile(null);
+    }
+
+    // Remove from modified files if it was there
+    setModifiedFiles(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(fileId.toString());
+      return newMap;
+    });
+
+    setOutput(prev => prev + `🗑️ Deleted: ${file.name}\n`);
+  };
+
+  const renameFile = (fileId, newName) => {
+    if (!newName.trim()) return;
+
+    const updatedFiles = renameFileInTree(files, fileId, newName);
+    setFiles(updatedFiles);
+    setOutput(prev => prev + `✏️ Renamed to: ${newName}\n`);
+    setEditingFileId(null);
+    setEditNameValue('');
+  };
+
+  const startEditName = (fileId, currentName) => {
+    setEditingFileId(fileId);
+    setEditNameValue(currentName);
   };
 
   const commitChanges = async () => {
@@ -237,6 +338,7 @@ const CodeEditor = () => {
   const renderFileTree = (fileList, depth = 0) => {
     return fileList.map(file => {
       const isModified = modifiedFiles.has(file.id.toString());
+      const isEditing = editingFileId === file.id;
       
       return (
         <div key={file.id} className="select-none">
@@ -249,29 +351,144 @@ const CodeEditor = () => {
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {file.type === 'folder' ? <Folder size={16} /> : <File size={16} />}
-              <span className="text-sm truncate">{file.name}</span>
-              {isModified && (
-                <span className="text-xs text-yellow-400 bg-yellow-900/30 px-1 rounded">modified</span>
+              
+              {isEditing ? (
+                <div className="flex items-center gap-1 flex-1">
+                  <input
+                    type="text"
+                    value={editNameValue}
+                    onChange={(e) => setEditNameValue(e.target.value)}
+                    className="bg-gray-700 text-white text-sm px-1 py-0.5 rounded flex-1 min-w-0"
+                    onKeyPress={(e) => e.key === 'Enter' && renameFile(file.id, editNameValue)}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => renameFile(file.id, editNameValue)}
+                    className="text-green-400 hover:text-green-300"
+                  >
+                    <Check size={14} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingFileId(null);
+                      setEditNameValue('');
+                    }}
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="text-sm truncate">{file.name}</span>
+                  {isModified && (
+                    <span className="text-xs text-yellow-400 bg-yellow-900/30 px-1 rounded">modified</span>
+                  )}
+                </>
               )}
             </div>
-            {isModified && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Revert changes
-                  setModifiedFiles(prev => {
-                    const newMap = new Map(prev);
-                    newMap.delete(file.id.toString());
-                    return newMap;
-                  });
-                }}
-                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400"
-                title="Revert changes"
-              >
-                <RefreshCw size={12} />
-              </button>
-            )}
+            
+            <div className="flex items-center gap-1">
+              {isModified && !isEditing && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Revert changes
+                    setModifiedFiles(prev => {
+                      const newMap = new Map(prev);
+                      newMap.delete(file.id.toString());
+                      return newMap;
+                    });
+                  }}
+                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400"
+                  title="Revert changes"
+                >
+                  <RefreshCw size={12} />
+                </button>
+              )}
+              
+              {!isEditing && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEditName(file.id, file.name);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-400"
+                    title="Rename"
+                  >
+                    <Edit2 size={12} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Delete ${file.type} "${file.name}"?`)) {
+                        deleteFile(file.id);
+                      }
+                    }}
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400"
+                    title="Delete"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFileAction({ type: 'file', parentId: file.type === 'folder' ? file.id : null });
+                    }}
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-green-400"
+                    title="New File"
+                  >
+                    <Plus size={12} />
+                  </button>
+                  {file.type === 'folder' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFileAction({ type: 'folder', parentId: file.id });
+                      }}
+                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-green-400"
+                      title="New Folder"
+                    >
+                      <Folder size={12} />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
+          
+          {fileAction.parentId === file.id && (
+            <div className="ml-2 px-2 py-1" style={{ paddingLeft: `${(depth + 1) * 16 + 8}px` }}>
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
+                  placeholder={`New ${fileAction.type} name`}
+                  className="bg-gray-800 text-white text-sm px-2 py-1 rounded flex-1"
+                  onKeyPress={(e) => e.key === 'Enter' && createFile(file.id, fileAction.type)}
+                  autoFocus
+                />
+                <button
+                  onClick={() => createFile(file.id, fileAction.type)}
+                  className="text-green-400 hover:text-green-300"
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  onClick={() => {
+                    setFileAction({ type: null, parentId: null });
+                    setNewFileName('');
+                  }}
+                  className="text-red-400 hover:text-red-300"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+          
           {file.children && renderFileTree(file.children, depth + 1)}
         </div>
       );
@@ -370,12 +587,60 @@ const CodeEditor = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - File Explorer */}
         <div className="w-64 bg-gray-900 border-r border-gray-700 flex flex-col">
-          <div className="p-4 border-b border-gray-700">
+          <div className="p-4 border-b border-gray-700 flex justify-between items-center">
             <h2 className="font-bold text-white flex items-center gap-2">
               <Folder size={16} />
               GITHUB FILES
             </h2>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setFileAction({ type: 'file', parentId: null })}
+                className="text-gray-400 hover:text-white p-1"
+                title="New File"
+              >
+                <File size={14} />
+              </button>
+              <button
+                onClick={() => setFileAction({ type: 'folder', parentId: null })}
+                className="text-gray-400 hover:text-white p-1"
+                title="New Folder"
+              >
+                <Folder size={14} />
+              </button>
+            </div>
           </div>
+          
+          {fileAction.parentId === null && fileAction.type != null && (
+            <div className="px-2 py-1 border-b border-gray-700">
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
+                  placeholder={`New ${fileAction.type} name`}
+                  className="bg-gray-800 text-white text-sm px-2 py-1 rounded flex-1"
+                  onKeyPress={(e) => e.key === 'Enter' && createFile(null, fileAction.type)}
+                  autoFocus
+                />
+                <button
+                  onClick={() => createFile(null, fileAction.type)}
+                  className="text-green-400 hover:text-green-300"
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  onClick={() => {
+                    setFileAction({ type: null, parentId: null });
+                    setNewFileName('');
+                  }}
+                  className="text-red-400 hover:text-red-300"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+          
           <div className="flex-1 overflow-y-auto p-2">
             {files.length > 0 ? (
               renderFileTree(files)
@@ -426,6 +691,15 @@ const CodeEditor = () => {
                     {isModified && (
                       <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
                     )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteFile(file.id);
+                      }}
+                      className="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100"
+                    >
+                      <X size={12} />
+                    </button>
                   </button>
                 );
               })}
@@ -452,6 +726,9 @@ const CodeEditor = () => {
                   ref={fileEditorRef}
                   value={activeFileContent?.content || ''}
                   onChange={(e) => handleFileChange(e.target.value)}
+                  onSelect={() => updateCursorPosition(activeFileContent?.content || '')}
+                  onClick={() => updateCursorPosition(activeFileContent?.content || '')}
+                  onKeyUp={() => updateCursorPosition(activeFileContent?.content || '')}
                   className="flex-1 bg-gray-900 text-green-400 font-mono text-sm p-4 resize-none focus:outline-none leading-relaxed"
                   spellCheck="false"
                 />
@@ -542,6 +819,8 @@ const CodeEditor = () => {
               <span>File: {activeFileContent.name}</span>
               <span>Language: {activeFileContent.language}</span>
               <span>Size: {(activeFileContent.content?.length || 0)} chars</span>
+              <span>Line: {cursorPosition.line}, Column: {cursorPosition.column}</span>
+              <span>Encoding: UTF-8</span>
               {modifiedFiles.has(activeFile?.toString()) && (
                 <span className="text-yellow-400">● Modified</span>
               )}
@@ -583,6 +862,62 @@ const updateFileContent = (files, fileId, newContent, fileList = files) => {
       return {
         ...file,
         children: updateFileContent(files, fileId, newContent, file.children)
+      };
+    }
+    return file;
+  });
+};
+
+const addFileToTree = (files, parentId, newFile, type, fileList = files) => {
+  if (parentId === null) {
+    return [...fileList, newFile];
+  }
+
+  return fileList.map(file => {
+    if (file.id === parentId) {
+      if (type === 'folder' && file.type === 'folder') {
+        return {
+          ...file,
+          children: [...(file.children || []), newFile]
+        };
+      } else if (file.type === 'folder') {
+        return {
+          ...file,
+          children: [...(file.children || []), newFile]
+        };
+      }
+    }
+    if (file.children) {
+      return {
+        ...file,
+        children: addFileToTree(file.children, parentId, newFile, type, file.children)
+      };
+    }
+    return file;
+  });
+};
+
+const removeFileFromTree = (files, fileId, fileList = files) => {
+  return fileList.filter(file => {
+    if (file.id === fileId) {
+      return false;
+    }
+    if (file.children) {
+      file.children = removeFileFromTree(file.children, fileId, file.children);
+    }
+    return true;
+  });
+};
+
+const renameFileInTree = (files, fileId, newName, fileList = files) => {
+  return fileList.map(file => {
+    if (file.id === fileId) {
+      return { ...file, name: newName };
+    }
+    if (file.children) {
+      return {
+        ...file,
+        children: renameFileInTree(file.children, fileId, newName, file.children)
       };
     }
     return file;
