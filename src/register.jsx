@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Ghost, Skull, Zap } from 'lucide-react';
+import { register as registerUser } from './services/authService.jsx';
 
 const Register = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -14,17 +15,46 @@ const Register = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [passwordMatchError, setPasswordMatchError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setPasswordMatchError('');
+    
+    // Client-side password match validation
+    if (formData.password !== formData.confirmPassword) {
+      setPasswordMatchError('Passwords do not match');
+      return;
+    }
+    
     setIsLoading(true);
     
-    // Simulate registration process
-    setTimeout(() => {
-      // Auto-login after registration
-      onLogin('fake_jwt_token_here');
+    try {
+      // Call authService.register
+      const result = await registerUser(
+        formData.username,
+        formData.email,
+        formData.password,
+        formData.confirmPassword
+      );
+      
+      if (result.success) {
+        // Store token in localStorage on success
+        localStorage.setItem('authToken', result.token);
+        
+        // Call onLogin callback with token for auto-login
+        onLogin(result.token);
+      } else {
+        // Display error message from service response
+        setError(result.error || 'Registration failed. Please try again.');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const handleChange = (e) => {
@@ -62,6 +92,21 @@ const Register = ({ onLogin }) => {
           {/* Registration Form */}
           <div className="bg-gray-900/90 backdrop-blur-sm border-2 border-green-700 rounded-xl p-8 shadow-2xl shadow-green-900/50">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Error Messages */}
+              {error && (
+                <div className="bg-red-900/50 border-2 border-red-600 rounded-lg p-4 text-red-200">
+                  <p className="font-bold">⚠️ Summoning Failed</p>
+                  <p className="text-sm mt-1">{error}</p>
+                </div>
+              )}
+              
+              {passwordMatchError && (
+                <div className="bg-red-900/50 border-2 border-red-600 rounded-lg p-4 text-red-200">
+                  <p className="font-bold">⚠️ Incantation Mismatch</p>
+                  <p className="text-sm mt-1">{passwordMatchError}</p>
+                </div>
+              )}
+              
               {/* Username */}
               <div>
                 <label className="block text-white font-bold mb-2" style={{ fontFamily: "'Creepster', cursive" }}>
