@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Set up project structure and dependencies
+- [x] 1. Set up project structure and dependencies
 
   - Create `src/services` directory for authentication and storage services
   - Install bcryptjs for password hashing
@@ -8,7 +8,7 @@
   - Install fast-check for property-based testing
   - _Requirements: 3.1, 5.1_
 
-- [ ] 2. Implement Storage Service
+- [x] 2. Implement Storage Service
 
   - Create `src/services/storageService.js` with file operations
   - Implement `initStorage()` to create users.json with initial structure
@@ -39,7 +39,7 @@
   - Test corrupted JSON returns error
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 3. Implement Authentication Service core functions
+- [x] 3. Implement Authentication Service core functions
 
   - Create `src/services/authService.js`
   - Implement `hashPassword()` using bcryptjs with salt
@@ -64,7 +64,7 @@
   - Test generateToken produces non-empty strings
   - _Requirements: 3.1, 3.2, 5.1_
 
-- [ ] 4. Implement user registration
+- [x] 4. Implement user registration
 
   - Implement `register(username, email, password, confirmPassword)` function
   - Validate password and confirmPassword match
@@ -108,7 +108,7 @@
   - Test registration with duplicate email fails
   - _Requirements: 1.1, 1.2_
 
-- [ ] 5. Implement user login
+- [x] 5. Implement user login
 
   - Implement `login(email, password)` function
   - Retrieve user by email using findUserByEmail
@@ -176,7 +176,7 @@
 
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Integrate with Login component
+- [x] 8. Integrate with Login component
 
   - Import authService in `src/login.jsx`
   - Replace simulated login with `authService.login(email, password)`
@@ -193,7 +193,9 @@
   - Test token storage in localStorage
   - _Requirements: 7.1, 7.4_
 
-- [ ] 9. Integrate with Register component
+-
+
+- [x] 9. Integrate with Register component
 
   - Import authService in `src/register.jsx`
   - Replace simulated registration with `authService.register(username, email, password, confirmPassword)`
