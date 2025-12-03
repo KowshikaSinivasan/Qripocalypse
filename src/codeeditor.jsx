@@ -131,12 +131,6 @@ const CodeEditor = () => {
       
       // Clear GitHub repo input
       setRepoInput('');
-    } else {
-      // GitHub editor mode or no project selected
-      setFiles([]);
-      setActiveFile(null);
-      setCurrentRepo('');
-      setCollaborators([]);
     }
   }, [currentProject]);
 
