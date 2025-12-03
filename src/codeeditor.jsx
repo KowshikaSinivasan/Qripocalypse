@@ -162,6 +162,18 @@ const CodeEditor = () => {
     
     setFiles(projectFiles);
     setSelectedProjectId(projectId);
+    const projectKey = `modifiedFiles_${projectId}`;
+    const saved = localStorage.getItem(projectKey);
+
+    if (saved) {
+      try {
+        setModifiedFiles(new Map(Object.entries(JSON.parse(saved))));
+      } catch {
+        setModifiedFiles(new Map());
+      }
+    } else {
+      setModifiedFiles(new Map());
+    }
     setCurrentRepo(project.name);
     
     // Initialize collaborators
@@ -187,6 +199,7 @@ const CodeEditor = () => {
 
       setFiles(clonedFiles);
       setCurrentRepo(repoName);
+      setModifiedFiles(new Map(Object.entries(JSON.parse(localStorage.getItem(`modifiedFiles_github`)))))
       setSelectedProjectId(''); // Clear any project selection
       setCollaborators(project.collaborators || []);
 
@@ -942,26 +955,31 @@ const CodeEditor = () => {
                   <button
                     key={file.id}
                     onClick={() => setActiveFile(file.id)}
-                    className={`px-4 py-2 border-r border-gray-700 text-sm flex items-center gap-2 flex-shrink-0 ${
-                      activeFile === file.id 
-                        ? 'bg-gray-700 text-white' 
+                    className={`px-4 py-2 border-r border-gray-700 text-sm flex items-center gap-2 flex-shrink-0 group ${
+                      activeFile === file.id
+                        ? 'bg-gray-700 text-white'
                         : 'text-gray-400 hover:text-white'
                     }`}
                   >
                     <File size={14} />
                     {file.name}
+
                     {isModified && (
                       <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
                     )}
-                    <button
+
+                    {/* FIXED: span instead of nested button */}
+                    <span
+                      role="button"
+                      tabIndex={0}
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteFile(file.id);
                       }}
-                      className="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100"
+                      className="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 cursor-pointer"
                     >
                       <X size={12} />
-                    </button>
+                    </span>
                   </button>
                 );
               })}
