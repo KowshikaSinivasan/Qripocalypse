@@ -1,20 +1,75 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Settings, Cloud, Database, Terminal, 
   Download, Play, Copy, 
   Package
 } from 'lucide-react';
 import ProjectSelector from './components/ProjectSelector';
-import { loadSelectedProject } from './utils/storageHelpers';
+import { 
+  loadSelectedProject, 
+  saveSelectedProject,
+  loadConfigurations,
+  saveConfigurations,
+  loadDeployments,
+  saveDeployments,
+  loadMetrics,
+  saveMetrics,
+  loadAlerts,
+  saveAlerts
+} from './utils/storageHelpers';
+import { 
+  generateDeploymentHistory,
+  generateAlerts,
+  generateMetrics
+} from './utils/simulationUtils';
+import {
+  defaultDockerConfig,
+  defaultKubernetesConfig,
+  defaultGCPConfig,
+  defaultAWSConfig,
+  defaultVercelConfig,
+  defaultRenderConfig,
+  defaultDataDogConfig
+} from './models/deploymentModels';
 import { useProjects } from './components/projectContext';
 
 const ProjectSettings = () => {
   const { projectsList } = useProjects();
+  
+  // Main state management
   const [selectedProject, setSelectedProject] = useState(null);
   const [activeTab, setActiveTab] = useState('docker');
-  const [dockerLogs, setDockerLogs] = useState('');
-  const [gcpLogs, setGcpLogs] = useState('');
-  const [datadogLogs, setDatadogLogs] = useState('');
+  const [selectedPlatform, setSelectedPlatform] = useState('gcp');
+  
+  // Configuration state
+  const [configurations, setConfigurations] = useState({
+    docker: { ...defaultDockerConfig },
+    kubernetes: { ...defaultKubernetesConfig },
+    gcp: { ...defaultGCPConfig },
+    aws: { ...defaultAWSConfig },
+    vercel: { ...defaultVercelConfig },
+    render: { ...defaultRenderConfig },
+    datadog: { ...defaultDataDogConfig }
+  });
+  
+  // Deployment and monitoring state
+  const [deployments, setDeployments] = useState([]);
+  const [metrics, setMetrics] = useState(null);
+  const [alerts, setAlerts] = useState([]);
+  
+  // Logs state
+  const [logs, setLogs] = useState({
+    docker: '',
+    deployment: '',
+    datadog: ''
+  });
+  
+  // Simulation state
+  const [simulationState, setSimulationState] = useState({
+    isBuilding: false,
+    isDeploying: false,
+    isFetchingMetrics: false
+  });
 
   // Load selected project from localStorage on mount
   useEffect(() => {
@@ -27,61 +82,271 @@ const ProjectSettings = () => {
     }
   }, [projectsList]);
 
-  const handleProjectChange = (project) => {
+  // Load project-specific data when project changes
+  useEffect(() => {
+    if (!selectedProject) return;
+
+    // Load configurations
+    const savedConfigs = loadConfigurations(selectedProject.id);
+    if (savedConfigs) {
+      setConfigurations(savedConfigs);
+    } else {
+      // Reset to defaults for new project
+      setConfigurations({
+        docker: { ...defaultDockerConfig },
+        kubernetes: { ...defaultKubernetesConfig },
+        gcp: { ...defaultGCPConfig },
+        aws: { ...defaultAWSConfig },
+        vercel: { ...defaultVercelConfig },
+        render: { ...defaultRenderConfig },
+        datadog: { ...defaultDataDogConfig }
+      });
+    }
+
+    // Load deployments or generate initial history
+    const savedDeployments = loadDeployments(selectedProject.id);
+    if (savedDeployments.length > 0) {
+      setDeployments(savedDeployments);
+    } else {
+      // Generate initial deployment history for new project
+      const initialDeployments = generateDeploymentHistory(
+        selectedProject.id,
+        selectedProject.name,
+        10
+      );
+      setDeployments(initialDeployments);
+      saveDeployments(selectedProject.id, initialDeployments);
+    }
+
+    // Load metrics or generate initial metrics
+    const savedMetrics = loadMetrics(selectedProject.id);
+    if (savedMetrics) {
+      setMetrics(savedMetrics);
+    } else {
+      const initialMetrics = generateMetrics();
+      setMetrics(initialMetrics);
+      saveMetrics(selectedProject.id, initialMetrics);
+    }
+
+    // Load alerts or generate initial alerts
+    const savedAlerts = loadAlerts(selectedProject.id);
+    if (savedAlerts.length > 0) {
+      setAlerts(savedAlerts);
+    } else {
+      const initialAlerts = generateAlerts(5);
+      setAlerts(initialAlerts);
+      saveAlerts(selectedProject.id, initialAlerts);
+    }
+
+    // Clear logs when switching projects
+    setLogs({
+      docker: '',
+      deployment: '',
+      datadog: ''
+    });
+  }, [selectedProject]);
+
+  // Auto-save configurations with debounce
+  useEffect(() => {
+    if (!selectedProject) return;
+
+    const timeoutId = setTimeout(() => {
+      saveConfigurations(selectedProject.id, configurations);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedProject, configurations]);
+
+  // Save deployments when they change
+  useEffect(() => {
+    if (!selectedProject || deployments.length === 0) return;
+    saveDeployments(selectedProject.id, deployments);
+  }, [selectedProject, deployments]);
+
+  // Save metrics when they change
+  useEffect(() => {
+    if (!selectedProject || !metrics) return;
+    saveMetrics(selectedProject.id, metrics);
+  }, [selectedProject, metrics]);
+
+  // Save alerts when they change
+  useEffect(() => {
+    if (!selectedProject || alerts.length === 0) return;
+    saveAlerts(selectedProject.id, alerts);
+  }, [selectedProject, alerts]);
+
+  const handleProjectChange = useCallback((project) => {
     setSelectedProject(project);
-  };
+    saveSelectedProject(project.id);
+  }, []);
 
   const tabs = [
     { id: 'docker', name: 'Docker Ritual', icon: '🐳' },
-    { id: 'gcp', name: 'Google Cloud', icon: '☁️' },
+    { id: 'cloud', name: 'Cloud Platforms', icon: '☁️' },
     { id: 'datadog', name: 'DataDog Spirits', icon: '📊' },
-    { id: 'deployment', name: 'Deployment', icon: '🚀' },
-    { id: 'monitoring', name: 'Monitoring', icon: '👁️' }
+    { id: 'deployment', name: 'Deployment Panel', icon: '🚀' },
+    { id: 'monitoring', name: 'Monitoring Panel', icon: '👁️' }
   ];
 
-  const buildDockerImage = () => {
-    setDockerLogs('🔮 Starting Docker image build...\n');
-    setTimeout(() => {
-      setDockerLogs(prev => prev + '🐳 Building haunted image...\n');
-      setTimeout(() => {
-        setDockerLogs(prev => prev + '✅ Docker image built successfully!\n');
-        setTimeout(() => {
-          setDockerLogs(prev => prev + '📦 Image tagged: ancient-spells:latest\n');
-        }, 1000);
-      }, 2000);
-    }, 1000);
+  const handleDockerConfigChange = useCallback((field, value) => {
+    setConfigurations(prev => ({
+      ...prev,
+      docker: {
+        ...prev.docker,
+        [field]: value
+      }
+    }));
+  }, []);
+
+  const buildDockerImage = async () => {
+    if (!selectedProject) return;
+    
+    setSimulationState(prev => ({ ...prev, isBuilding: true }));
+    setLogs(prev => ({ ...prev, docker: '' }));
+    
+    try {
+      const { simulateDockerBuild } = await import('./utils/simulationUtils');
+      
+      const result = await simulateDockerBuild(
+        configurations.docker,
+        (logMessage) => {
+          setLogs(prev => ({ ...prev, docker: prev.docker + logMessage }));
+        }
+      );
+      
+      if (result.success) {
+        // Update docker config with the built image tag
+        setConfigurations(prev => ({
+          ...prev,
+          docker: {
+            ...prev.docker,
+            tag: result.imageTag.split(':')[1] || 'latest'
+          }
+        }));
+      }
+    } catch (error) {
+      setLogs(prev => ({ 
+        ...prev, 
+        docker: prev.docker + `❌ Build failed: ${error.message}\n` 
+      }));
+    } finally {
+      setSimulationState(prev => ({ ...prev, isBuilding: false }));
+    }
+  };
+
+  const downloadDockerImage = async () => {
+    if (!selectedProject || !configurations.docker.imageName) return;
+    
+    setSimulationState(prev => ({ ...prev, isBuilding: true }));
+    
+    const imageTag = `${configurations.docker.imageName}:${configurations.docker.tag}`;
+    setLogs(prev => ({ ...prev, docker: prev.docker + `\n🔮 Downloading image: ${imageTag}...\n` }));
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLogs(prev => ({ ...prev, docker: prev.docker + '📥 Pulling layers...\n' }));
+    
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setLogs(prev => ({ ...prev, docker: prev.docker + '  ✓ Layer 1/3 downloaded\n' }));
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLogs(prev => ({ ...prev, docker: prev.docker + '  ✓ Layer 2/3 downloaded\n' }));
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLogs(prev => ({ ...prev, docker: prev.docker + '  ✓ Layer 3/3 downloaded\n' }));
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setLogs(prev => ({ 
+      ...prev, 
+      docker: prev.docker + `✅ Image downloaded successfully: ${imageTag}\n` 
+    }));
+    
+    setSimulationState(prev => ({ ...prev, isBuilding: false }));
+  };
+
+  const pushToRegistry = async () => {
+    if (!selectedProject || !configurations.docker.imageName || !configurations.docker.registry) {
+      setLogs(prev => ({ 
+        ...prev, 
+        docker: prev.docker + '\n❌ Error: Image name and registry are required\n' 
+      }));
+      return;
+    }
+    
+    setSimulationState(prev => ({ ...prev, isBuilding: true }));
+    
+    const imageTag = `${configurations.docker.imageName}:${configurations.docker.tag}`;
+    const registryUrl = `${configurations.docker.registry}/${imageTag}`;
+    
+    setLogs(prev => ({ ...prev, docker: prev.docker + `\n🔮 Pushing to registry: ${registryUrl}...\n` }));
+    
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setLogs(prev => ({ ...prev, docker: prev.docker + '🔐 Authenticating with registry...\n' }));
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLogs(prev => ({ ...prev, docker: prev.docker + '  ✓ Authentication successful\n' }));
+    
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    setLogs(prev => ({ ...prev, docker: prev.docker + '📤 Pushing layers...\n' }));
+    
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setLogs(prev => ({ ...prev, docker: prev.docker + '  ✓ Layer 1/3 pushed\n' }));
+    
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    setLogs(prev => ({ ...prev, docker: prev.docker + '  ✓ Layer 2/3 pushed\n' }));
+    
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    setLogs(prev => ({ ...prev, docker: prev.docker + '  ✓ Layer 3/3 pushed\n' }));
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setLogs(prev => ({ 
+      ...prev, 
+      docker: prev.docker + `✅ Image pushed successfully to ${registryUrl}\n` 
+    }));
+    
+    setSimulationState(prev => ({ ...prev, isBuilding: false }));
   };
 
   const deployToGCP = () => {
-    setGcpLogs('🔮 Connecting to Google Cloud...\n');
+    setLogs(prev => ({ ...prev, deployment: '🔮 Connecting to Google Cloud...\n' }));
     setTimeout(() => {
-      setGcpLogs(prev => prev + '☁️ Deploying to Google Kubernetes Engine...\n');
+      setLogs(prev => ({ ...prev, deployment: prev.deployment + '☁️ Deploying to Google Kubernetes Engine...\n' }));
       setTimeout(() => {
-        setGcpLogs(prev => prev + '✅ Successfully deployed to GKE!\n');
+        setLogs(prev => ({ ...prev, deployment: prev.deployment + '✅ Successfully deployed to GKE!\n' }));
         setTimeout(() => {
-          setGcpLogs(prev => prev + '🌐 Service URL: https://ancient-spells-gha7d3gcp.app\n');
+          setLogs(prev => ({ ...prev, deployment: prev.deployment + '🌐 Service URL: https://ancient-spells-gha7d3gcp.app\n' }));
         }, 1000);
       }, 2000);
     }, 1000);
   };
 
   const fetchDatadogLogs = () => {
-    setDatadogLogs('🔮 Summoning DataDog spirits...\n');
+    setLogs(prev => ({ ...prev, datadog: '🔮 Summoning DataDog spirits...\n' }));
     setTimeout(() => {
-      setDatadogLogs(prev => prev + '📊 Fetching application metrics...\n');
+      setLogs(prev => ({ ...prev, datadog: prev.datadog + '📊 Fetching application metrics...\n' }));
       setTimeout(() => {
-        setDatadogLogs(prev => prev + 
+        setLogs(prev => ({ ...prev, datadog: prev.datadog + 
           '📈 CPU Usage: 23%\n' +
           '💾 Memory: 45%\n' +
           '🔥 Requests: 1,234/min\n' +
           '👻 Errors: 2\n' +
           '✅ Uptime: 99.9%\n'
-        );
+        }));
       }, 2000);
     }, 1000);
   };
 
   const renderTabContent = () => {
+    // Show message if no project is selected
+    if (!selectedProject) {
+      return (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">👻</div>
+          <h3 className="text-2xl font-bold text-white mb-2">No Project Selected</h3>
+          <p className="text-gray-400">Please select a project from the dropdown above to configure deployment settings.</p>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'docker':
         return (
@@ -94,27 +359,58 @@ const ProjectSettings = () => {
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-gray-400 mb-2">Image Name</label>
+                    <label className="block text-gray-400 mb-2">Image Name *</label>
                     <input 
                       type="text" 
-                      defaultValue="ancient-spells"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-600 focus:outline-none"
+                      value={configurations.docker.imageName}
+                      onChange={(e) => handleDockerConfigChange('imageName', e.target.value)}
+                      placeholder="my-app"
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                      disabled={simulationState.isBuilding}
                     />
                   </div>
                   <div>
                     <label className="block text-gray-400 mb-2">Dockerfile Path</label>
                     <input 
                       type="text" 
-                      defaultValue="./Dockerfile"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-600 focus:outline-none"
+                      value={configurations.docker.dockerfilePath}
+                      onChange={(e) => handleDockerConfigChange('dockerfilePath', e.target.value)}
+                      placeholder="./Dockerfile"
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                      disabled={simulationState.isBuilding}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 mb-2">Registry URL</label>
+                    <input 
+                      type="text" 
+                      value={configurations.docker.registry}
+                      onChange={(e) => handleDockerConfigChange('registry', e.target.value)}
+                      placeholder="docker.io/username"
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                      disabled={simulationState.isBuilding}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 mb-2">Tag</label>
+                    <input 
+                      type="text" 
+                      value={configurations.docker.tag}
+                      onChange={(e) => handleDockerConfigChange('tag', e.target.value)}
+                      placeholder="latest"
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none"
+                      disabled={simulationState.isBuilding}
                     />
                   </div>
                   <div>
                     <label className="block text-gray-400 mb-2">Build Args</label>
                     <textarea 
-                      placeholder="ARG1=value1\nARG2=value2"
+                      value={configurations.docker.buildArgs}
+                      onChange={(e) => handleDockerConfigChange('buildArgs', e.target.value)}
+                      placeholder="ARG1=value1&#10;ARG2=value2"
                       rows="3"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-blue-600 focus:outline-none resize-none"
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none resize-none"
+                      disabled={simulationState.isBuilding}
                     />
                   </div>
                 </div>
@@ -125,40 +421,104 @@ const ProjectSettings = () => {
                 <div className="space-y-3">
                   <button
                     onClick={buildDockerImage}
-                    className="w-full bg-blue-900 hover:bg-blue-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    disabled={simulationState.isBuilding || !configurations.docker.imageName}
+                    className="w-full bg-blue-900 hover:bg-blue-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Play size={16} />
-                    Build Docker Image
+                    {simulationState.isBuilding ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Building...
+                      </>
+                    ) : (
+                      <>
+                        <Play size={16} />
+                        Build Docker Image
+                      </>
+                    )}
                   </button>
-                  <button className="w-full bg-green-900 hover:bg-green-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                  <button 
+                    onClick={downloadDockerImage}
+                    disabled={simulationState.isBuilding || !configurations.docker.imageName}
+                    className="w-full bg-green-900 hover:bg-green-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <Download size={16} />
                     Download Image
                   </button>
-                  <button className="w-full bg-purple-900 hover:bg-purple-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                  <button 
+                    onClick={pushToRegistry}
+                    disabled={simulationState.isBuilding || !configurations.docker.imageName || !configurations.docker.registry}
+                    className="w-full bg-purple-900 hover:bg-purple-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <Copy size={16} />
                     Push to Registry
                   </button>
                 </div>
+                
+                {!configurations.docker.imageName && (
+                  <div className="mt-4 p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+                    <p className="text-yellow-400 text-sm">⚠️ Image name is required</p>
+                  </div>
+                )}
+                
+                {configurations.docker.imageName && !configurations.docker.registry && (
+                  <div className="mt-4 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                    <p className="text-blue-400 text-sm">ℹ️ Add registry URL to enable push</p>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">Build Logs</h3>
-              <pre className="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-48 overflow-y-auto">
-                {dockerLogs || '🐳 Docker logs will appear here...'}
+              <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <Terminal size={20} />
+                Build Logs
+                {simulationState.isBuilding && (
+                  <span className="text-sm text-gray-400 font-normal ml-2">
+                    (Building...)
+                  </span>
+                )}
+              </h3>
+              <pre className="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-64 overflow-y-auto whitespace-pre-wrap">
+                {logs.docker || '🐳 Docker logs will appear here...\n\nConfigure your Docker settings above and click "Build Docker Image" to start.'}
               </pre>
             </div>
           </div>
         );
 
-      case 'gcp':
+      case 'cloud':
         return (
           <div className="space-y-6">
+            {/* Platform Selector */}
+            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+              <h3 className="text-xl font-bold text-white mb-4">Select Cloud Platform</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {['gcp', 'aws', 'vercel', 'render'].map(platform => (
+                  <button
+                    key={platform}
+                    onClick={() => setSelectedPlatform(platform)}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedPlatform === platform
+                        ? 'border-purple-500 bg-purple-900/30'
+                        : 'border-gray-700 bg-gray-900 hover:border-gray-600'
+                    }`}
+                  >
+                    <div className="text-2xl mb-2">
+                      {platform === 'gcp' && '☁️'}
+                      {platform === 'aws' && '🔶'}
+                      {platform === 'vercel' && '▲'}
+                      {platform === 'render' && '🎨'}
+                    </div>
+                    <div className="text-white font-bold uppercase">{platform}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
                 <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                   <Cloud size={24} />
-                  GCP Configuration
+                  {selectedPlatform.toUpperCase()} Configuration
                 </h3>
                 <div className="space-y-4">
                   <div>
@@ -196,7 +556,7 @@ const ProjectSettings = () => {
                     className="w-full bg-blue-900 hover:bg-blue-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
                   >
                     <Play size={16} />
-                    Deploy to GKE
+                    Deploy to {selectedPlatform.toUpperCase()}
                   </button>
                   <button className="w-full bg-green-900 hover:bg-green-800 text-white py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
                     <Cloud size={16} />
@@ -213,7 +573,7 @@ const ProjectSettings = () => {
             <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
               <h3 className="text-xl font-bold text-white mb-4">Deployment Logs</h3>
               <pre className="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-48 overflow-y-auto">
-                {gcpLogs || '☁️ GCP deployment logs will appear here...'}
+                {logs.deployment || '☁️ Cloud deployment logs will appear here...'}
               </pre>
             </div>
           </div>
@@ -281,30 +641,211 @@ const ProjectSettings = () => {
             <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
               <h3 className="text-xl font-bold text-white mb-4">DataDog Metrics</h3>
               <pre className="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-48 overflow-y-auto">
-                {datadogLogs || '📊 DataDog metrics will appear here...'}
+                {logs.datadog || '📊 DataDog metrics will appear here...'}
               </pre>
             </div>
 
             {/* Metrics Dashboard Preview */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-gray-800/50 rounded-lg p-4 text-center">
-                <div className="text-2xl text-green-400 mb-1">99.9%</div>
-                <div className="text-gray-400 text-sm">Uptime</div>
+            {metrics && (
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="bg-gray-800/50 rounded-lg p-4 text-center">
+                  <div className="text-2xl text-green-400 mb-1">{metrics.uptime}%</div>
+                  <div className="text-gray-400 text-sm">Uptime</div>
+                </div>
+                <div className="bg-gray-800/50 rounded-lg p-4 text-center">
+                  <div className="text-2xl text-blue-400 mb-1">{metrics.requestRate}</div>
+                  <div className="text-gray-400 text-sm">Requests/Min</div>
+                </div>
+                <div className="bg-gray-800/50 rounded-lg p-4 text-center">
+                  <div className="text-2xl text-yellow-400 mb-1">{metrics.responseTime}ms</div>
+                  <div className="text-gray-400 text-sm">Avg Response</div>
+                </div>
               </div>
-              <div className="bg-gray-800/50 rounded-lg p-4 text-center">
-                <div className="text-2xl text-blue-400 mb-1">1.2k</div>
-                <div className="text-gray-400 text-sm">Requests/Min</div>
+            )}
+          </div>
+        );
+
+      case 'deployment':
+        return (
+          <div className="space-y-6">
+            {/* Quick Stats */}
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-gray-700">
+                <div className="text-3xl text-purple-400 mb-1">{deployments.length}</div>
+                <div className="text-gray-400 text-sm">Total Deployments</div>
               </div>
-              <div className="bg-gray-800/50 rounded-lg p-4 text-center">
-                <div className="text-2xl text-yellow-400 mb-1">45ms</div>
-                <div className="text-gray-400 text-sm">Avg Response</div>
+              <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-gray-700">
+                <div className="text-3xl text-green-400 mb-1">
+                  {deployments.filter(d => d.status === 'success').length}
+                </div>
+                <div className="text-gray-400 text-sm">Successful</div>
+              </div>
+              <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-gray-700">
+                <div className="text-3xl text-red-400 mb-1">
+                  {deployments.filter(d => d.status === 'failed').length}
+                </div>
+                <div className="text-gray-400 text-sm">Failed</div>
+              </div>
+              <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-gray-700">
+                <div className="text-3xl text-blue-400 mb-1">
+                  {deployments.length > 0 
+                    ? Math.round((deployments.filter(d => d.status === 'success').length / deployments.length) * 100)
+                    : 0}%
+                </div>
+                <div className="text-gray-400 text-sm">Success Rate</div>
+              </div>
+            </div>
+
+            {/* Deployment History */}
+            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+              <h3 className="text-xl font-bold text-white mb-4">Recent Deployments</h3>
+              <div className="space-y-3">
+                {deployments.slice(0, 10).map(deployment => (
+                  <div 
+                    key={deployment.id}
+                    className="bg-gray-900 rounded-lg p-4 border border-gray-700 hover:border-purple-500 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          deployment.status === 'success' ? 'bg-green-400' :
+                          deployment.status === 'failed' ? 'bg-red-400' :
+                          'bg-yellow-400'
+                        }`} />
+                        <div>
+                          <div className="text-white font-bold">{deployment.platform.toUpperCase()}</div>
+                          <div className="text-gray-400 text-sm">
+                            {deployment.branch} • {deployment.commitHash}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-gray-400 text-sm">
+                          {new Date(deployment.timestamp).toLocaleString()}
+                        </div>
+                        <div className="text-gray-500 text-xs">{deployment.duration}s</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'monitoring':
+        return (
+          <div className="space-y-6">
+            {/* Health Status */}
+            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+              <h3 className="text-xl font-bold text-white mb-4">System Health</h3>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-white text-lg">Healthy</span>
+              </div>
+            </div>
+
+            {/* Real-time Metrics */}
+            {metrics && (
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+                  <div className="text-gray-400 text-sm mb-2">CPU Usage</div>
+                  <div className="text-3xl text-blue-400 font-bold">{metrics.cpuUsage}%</div>
+                  <div className="mt-2 bg-gray-900 rounded-full h-2">
+                    <div 
+                      className="bg-blue-400 h-2 rounded-full transition-all"
+                      style={{ width: `${metrics.cpuUsage}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+                  <div className="text-gray-400 text-sm mb-2">Memory Usage</div>
+                  <div className="text-3xl text-purple-400 font-bold">{metrics.memoryUsage}%</div>
+                  <div className="mt-2 bg-gray-900 rounded-full h-2">
+                    <div 
+                      className="bg-purple-400 h-2 rounded-full transition-all"
+                      style={{ width: `${metrics.memoryUsage}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+                  <div className="text-gray-400 text-sm mb-2">Request Rate</div>
+                  <div className="text-3xl text-green-400 font-bold">{metrics.requestRate}</div>
+                  <div className="text-gray-500 text-sm mt-1">requests/min</div>
+                </div>
+                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+                  <div className="text-gray-400 text-sm mb-2">Error Rate</div>
+                  <div className={`text-3xl font-bold ${
+                    metrics.errorRate > 3 ? 'text-red-400' : 'text-green-400'
+                  }`}>
+                    {metrics.errorRate}%
+                  </div>
+                  <div className="text-gray-500 text-sm mt-1">{metrics.errorCount} errors</div>
+                </div>
+                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+                  <div className="text-gray-400 text-sm mb-2">Response Time</div>
+                  <div className="text-3xl text-yellow-400 font-bold">{metrics.responseTime}ms</div>
+                  <div className="text-gray-500 text-sm mt-1">average</div>
+                </div>
+                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+                  <div className="text-gray-400 text-sm mb-2">Uptime</div>
+                  <div className="text-3xl text-green-400 font-bold">{metrics.uptime}%</div>
+                  <div className="text-gray-500 text-sm mt-1">last 24h</div>
+                </div>
+              </div>
+            )}
+
+            {/* Alerts Panel */}
+            <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+              <h3 className="text-xl font-bold text-white mb-4">Active Alerts</h3>
+              <div className="space-y-3">
+                {alerts.filter(a => !a.resolved).length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <div className="text-4xl mb-2">✅</div>
+                    <div>No active alerts</div>
+                  </div>
+                ) : (
+                  alerts.filter(a => !a.resolved).map(alert => (
+                    <div 
+                      key={alert.id}
+                      className={`bg-gray-900 rounded-lg p-4 border-l-4 ${
+                        alert.type === 'error' ? 'border-red-500' :
+                        alert.type === 'warning' ? 'border-yellow-500' :
+                        'border-blue-500'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-white font-bold">{alert.message}</div>
+                          <div className="text-gray-400 text-sm">
+                            {new Date(alert.timestamp).toLocaleString()}
+                          </div>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          alert.severity === 'critical' ? 'bg-red-900 text-red-200' :
+                          alert.severity === 'high' ? 'bg-orange-900 text-orange-200' :
+                          alert.severity === 'medium' ? 'bg-yellow-900 text-yellow-200' :
+                          'bg-blue-900 text-blue-200'
+                        }`}>
+                          {alert.severity.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
         );
 
       default:
-        return <div>Select a tab to configure settings</div>;
+        return (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🔮</div>
+            <h3 className="text-2xl font-bold text-white mb-2">Coming Soon</h3>
+            <p className="text-gray-400">This feature is under development.</p>
+          </div>
+        );
     }
   };
 
