@@ -1,12 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useProjects } from './projectContext';
+import FileSelector from './FileSelector';
+import { saveQRData, addToRecentSummons } from '../services/qrStorageService';
+import { loadConfigurations } from '../utils/storageHelpers';
 
-const QRGenerator = () => {
-  const [qrType, setQrType] = useState('character');
+const QRGenerator = ({ onQRGenerated }) => {
+  const { projectsList } = useProjects();
+  const [qrType, setQrType] = useState('theme');
   const [qrContent, setQrContent] = useState('');
   const [generatedObjectId, setGeneratedObjectId] = useState('');
   const [qrPreviewUrl, setQrPreviewUrl] = useState('');
   const [generatedGrid, setGeneratedGrid] = useState([]);
   const [batchNumber] = useState(Date.now());
+  
+  // Project-specific state
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isFileSelectorOpen, setIsFileSelectorOpen] = useState(false);
+  
+  // Type-specific content
+  const [themeData, setThemeData] = useState({ themeId: 'dracula', themeName: 'Dracula Mode' });
+  const [diffData, setDiffData] = useState({ summary: '', filesChanged: 0, additions: 0, deletions: 0 });
+  const [commitData, setCommitData] = useState({ hash: '', message: '', author: '' });
   
   const canvasRef = useRef(null);
   const previewCanvasRef = useRef(null);
@@ -64,17 +79,121 @@ const QRGenerator = () => {
   };
 
   const generateQR = () => {
-    if (!qrContent.trim()) {
-      alert('Please enter summoning details');
+    // Validate based on type
+    let qrData = null;
+    let displayName = '';
+    
+    switch (qrType) {
+      case 'theme':
+        if (!themeData.themeId) {
+          alert('Please select a theme');
+          return;
+        }
+        qrData = {
+          themeId: themeData.themeId,
+          themeName: themeData.themeName,
+          icon: getThemeIcon(themeData.themeId),
+          colors: getThemeColors(themeData.themeId)
+        };
+        displayName = themeData.themeName;
+        break;
+        
+      case 'diff':
+        if (!diffData.summary.trim()) {
+          alert('Please enter diff summary');
+          return;
+        }
+        if (!selectedProject) {
+          alert('Please select a project');
+          return;
+        }
+        qrData = {
+          summary: diffData.summary,
+          projectId: selectedProject.id,
+          projectName: selectedProject.name,
+          filesChanged: diffData.filesChanged,
+          additions: diffData.additions,
+          deletions: diffData.deletions
+        };
+        displayName = `${selectedProject.name} - ${diffData.summary.substring(0, 30)}`;
+        break;
+        
+      case 'commit':
+        if (!commitData.message.trim()) {
+          alert('Please enter commit message');
+          return;
+        }
+        if (!selectedProject) {
+          alert('Please select a project');
+          return;
+        }
+        qrData = {
+          commitHash: commitData.hash || generateCommitHash(),
+          message: commitData.message,
+          author: commitData.author || 'Unknown',
+          projectId: selectedProject.id,
+          projectName: selectedProject.name,
+          timestamp: new Date().toISOString()
+        };
+        displayName = `${selectedProject.name} - ${commitData.message.substring(0, 30)}`;
+        break;
+        
+      case 'projectFile':
+        if (!selectedFile) {
+          alert('Please select a file');
+          return;
+        }
+        qrData = {
+          projectId: selectedFile.projectId,
+          projectName: selectedFile.projectName,
+          fileName: selectedFile.name,
+          filePath: selectedFile.path,
+          content: selectedFile.content,
+          language: selectedFile.language
+        };
+        displayName = `${selectedFile.projectName} - ${selectedFile.name}`;
+        break;
+        
+      case 'deployment':
+        if (!selectedProject) {
+          alert('Please select a project');
+          return;
+        }
+        const deploymentConfig = loadConfigurations(selectedProject.id);
+        if (!deploymentConfig) {
+          alert('No deployment configuration found for this project');
+          return;
+        }
+        qrData = {
+          projectId: selectedProject.id,
+          projectName: selectedProject.name,
+          platform: deploymentConfig.platform || 'unknown',
+          status: deploymentConfig.status || 'inactive',
+          configuration: deploymentConfig,
+          lastDeployed: new Date().toISOString()
+        };
+        displayName = `${selectedProject.name} - ${deploymentConfig.platform || 'Deployment'}`;
+        break;
+        
+      default:
+        alert('Invalid summon type');
+        return;
+    }
+
+    // Save QR data to localStorage
+    const result = saveQRData(qrType, qrData);
+    if (!result) {
+      alert('Failed to save QR data');
       return;
     }
 
-    // Generate ObjectId from content
-    const objectId = encodeToObjectId(`${qrType}:${qrContent}`);
-    setGeneratedObjectId(objectId);
+    const { id, timestamp } = result;
+    
+    // Generate ObjectId (use the saved ID)
+    setGeneratedObjectId(id);
 
     // Encode to grid
-    const { grid } = encodeObjectId(objectId);
+    const { grid } = encodeObjectId(id);
     setGeneratedGrid(grid);
 
     // Draw to canvas for preview
@@ -82,6 +201,43 @@ const QRGenerator = () => {
       drawGridToCanvas(previewCanvasRef.current, grid);
       setQrPreviewUrl(previewCanvasRef.current.toDataURL('image/png'));
     }
+    
+    // Add to recent summons
+    addToRecentSummons({
+      id,
+      type: qrType,
+      name: displayName,
+      timestamp
+    });
+    
+    // Notify parent component
+    if (onQRGenerated) {
+      onQRGenerated({ id, type: qrType, name: displayName, timestamp });
+    }
+  };
+  
+  const generateCommitHash = () => {
+    return Math.random().toString(16).substring(2, 10);
+  };
+  
+  const getThemeIcon = (themeId) => {
+    const icons = {
+      dracula: '🧛',
+      possession: '👻',
+      frankenstein: '🧟',
+      ghost: '💀'
+    };
+    return icons[themeId] || '🎨';
+  };
+  
+  const getThemeColors = (themeId) => {
+    const colors = {
+      dracula: { primary: '#8b5cf6', secondary: '#6366f1' },
+      possession: { primary: '#10b981', secondary: '#059669' },
+      frankenstein: { primary: '#84cc16', secondary: '#65a30d' },
+      ghost: { primary: '#6b7280', secondary: '#4b5563' }
+    };
+    return colors[themeId] || { primary: '#8b5cf6', secondary: '#6366f1' };
   };
 
   const downloadQR = () => {
@@ -117,25 +273,6 @@ const QRGenerator = () => {
     }
   }, [qrContent, qrType]);
 
-  const summonOptions = {
-    character: {
-      placeholder: 'Dracula, Frankenstein, Witch, Ghost, Reaper...',
-      examples: ['Dracula', 'Frankenstein', 'Witch of Merges']
-    },
-    theme: {
-      placeholder: 'Dracula Mode, Possession Flicker, Frankenstein Lab...',
-      examples: ['Dracula Mode', 'Possession Flicker', 'Frankenstein Lab']
-    },
-    diff: {
-      placeholder: 'NecroDiff summary or ID...',
-      examples: ['Added dark magic function', 'Fixed cursed loop']
-    },
-    commit: {
-      placeholder: 'Commit hash or message...',
-      examples: ['a1b2c3d4', 'Fixed ancient curse']
-    }
-  };
-
   return (
     <div>
       <h3 className="text-xl font-bold text-white mb-4">Generate Summoning QR</h3>
@@ -148,32 +285,224 @@ const QRGenerator = () => {
           </label>
           <select
             value={qrType}
-            onChange={(e) => setQrType(e.target.value)}
+            onChange={(e) => {
+              setQrType(e.target.value);
+              setSelectedProject(null);
+              setSelectedFile(null);
+            }}
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-600 focus:outline-none transition-colors"
           >
-            <option value="character">👻 Summon Character</option>
             <option value="theme">🎨 Activate Theme</option>
             <option value="diff">🔀 Share Diff</option>
             <option value="commit">⚰️ Grave QR</option>
+            <option value="projectFile">📄 Project File</option>
+            <option value="deployment">🚀 Deployment Info</option>
           </select>
         </div>
 
-        {/* Content Input */}
-        <div>
-          <label className="block text-purple-300 text-sm font-bold mb-2">
-            SUMMONING DETAILS
-          </label>
-          <input
-            type="text"
-            value={qrContent}
-            onChange={(e) => setQrContent(e.target.value)}
-            placeholder={summonOptions[qrType]?.placeholder || 'Enter details...'}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-purple-600 focus:outline-none transition-colors"
-          />
-          <p className="text-gray-400 text-xs mt-2">
-            Example: {summonOptions[qrType]?.examples?.[0] || 'Enter summoning text'}
-          </p>
-        </div>
+        {/* Type-specific inputs */}
+        {qrType === 'theme' && (
+          <div>
+            <label className="block text-purple-300 text-sm font-bold mb-2">
+              SELECT THEME
+            </label>
+            <select
+              value={themeData.themeId}
+              onChange={(e) => {
+                const themeId = e.target.value;
+                const themeNames = {
+                  dracula: 'Dracula Mode',
+                  possession: 'Possession Flicker',
+                  frankenstein: 'Frankenstein Lab',
+                  ghost: 'Ghost Realm'
+                };
+                setThemeData({ themeId, themeName: themeNames[themeId] });
+              }}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-purple-600 focus:outline-none transition-colors"
+            >
+              <option value="dracula">🧛 Dracula Mode</option>
+              <option value="possession">👻 Possession Flicker</option>
+              <option value="frankenstein">🧟 Frankenstein Lab</option>
+              <option value="ghost">💀 Ghost Realm</option>
+            </select>
+          </div>
+        )}
+
+        {qrType === 'diff' && (
+          <>
+            <div>
+              <label className="block text-purple-300 text-sm font-bold mb-2">
+                SELECT PROJECT
+              </label>
+              <select
+                value={selectedProject?.id || ''}
+                onChange={(e) => {
+                  const project = projectsList.find(p => p.id === parseInt(e.target.value));
+                  setSelectedProject(project);
+                }}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-purple-600 focus:outline-none transition-colors"
+              >
+                <option value="">-- Choose a project --</option>
+                {projectsList.map(project => (
+                  <option key={project.id} value={project.id}>
+                    {project.ghost} {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-purple-300 text-sm font-bold mb-2">
+                DIFF SUMMARY
+              </label>
+              <input
+                type="text"
+                value={diffData.summary}
+                onChange={(e) => setDiffData({ ...diffData, summary: e.target.value })}
+                placeholder="e.g., Added dark magic function"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-purple-600 focus:outline-none transition-colors"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-purple-300 text-xs font-bold mb-2">
+                  FILES CHANGED
+                </label>
+                <input
+                  type="number"
+                  value={diffData.filesChanged}
+                  onChange={(e) => setDiffData({ ...diffData, filesChanged: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-purple-600 focus:outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-purple-300 text-xs font-bold mb-2">
+                  ADDITIONS
+                </label>
+                <input
+                  type="number"
+                  value={diffData.additions}
+                  onChange={(e) => setDiffData({ ...diffData, additions: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-purple-600 focus:outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-purple-300 text-xs font-bold mb-2">
+                  DELETIONS
+                </label>
+                <input
+                  type="number"
+                  value={diffData.deletions}
+                  onChange={(e) => setDiffData({ ...diffData, deletions: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-purple-600 focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {qrType === 'commit' && (
+          <>
+            <div>
+              <label className="block text-purple-300 text-sm font-bold mb-2">
+                SELECT PROJECT
+              </label>
+              <select
+                value={selectedProject?.id || ''}
+                onChange={(e) => {
+                  const project = projectsList.find(p => p.id === parseInt(e.target.value));
+                  setSelectedProject(project);
+                }}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-purple-600 focus:outline-none transition-colors"
+              >
+                <option value="">-- Choose a project --</option>
+                {projectsList.map(project => (
+                  <option key={project.id} value={project.id}>
+                    {project.ghost} {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-purple-300 text-sm font-bold mb-2">
+                COMMIT MESSAGE
+              </label>
+              <input
+                type="text"
+                value={commitData.message}
+                onChange={(e) => setCommitData({ ...commitData, message: e.target.value })}
+                placeholder="e.g., Fixed ancient curse"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-purple-600 focus:outline-none transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-purple-300 text-sm font-bold mb-2">
+                AUTHOR (Optional)
+              </label>
+              <input
+                type="text"
+                value={commitData.author}
+                onChange={(e) => setCommitData({ ...commitData, author: e.target.value })}
+                placeholder="e.g., Necromancer"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-purple-600 focus:outline-none transition-colors"
+              />
+            </div>
+          </>
+        )}
+
+        {qrType === 'projectFile' && (
+          <>
+            <div>
+              <label className="block text-purple-300 text-sm font-bold mb-2">
+                SELECT FILE
+              </label>
+              <button
+                onClick={() => setIsFileSelectorOpen(true)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-left text-white hover:border-purple-600 focus:border-purple-600 focus:outline-none transition-colors"
+              >
+                {selectedFile ? (
+                  <div>
+                    <div className="font-bold">{selectedFile.projectName} - {selectedFile.name}</div>
+                    <div className="text-gray-400 text-sm">{selectedFile.path}</div>
+                  </div>
+                ) : (
+                  <span className="text-gray-500">Click to select a file...</span>
+                )}
+              </button>
+            </div>
+          </>
+        )}
+
+        {qrType === 'deployment' && (
+          <>
+            <div>
+              <label className="block text-purple-300 text-sm font-bold mb-2">
+                SELECT PROJECT
+              </label>
+              <select
+                value={selectedProject?.id || ''}
+                onChange={(e) => {
+                  const project = projectsList.find(p => p.id === parseInt(e.target.value));
+                  setSelectedProject(project);
+                }}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-purple-600 focus:outline-none transition-colors"
+              >
+                <option value="">-- Choose a project --</option>
+                {projectsList.map(project => (
+                  <option key={project.id} value={project.id}>
+                    {project.ghost} {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedProject && (
+              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                <p className="text-gray-400 text-sm">
+                  Deployment configuration will be loaded from localStorage for this project.
+                </p>
+              </div>
+            )}
+          </>
+        )}
 
         {/* QR Preview */}
         <div className="bg-gray-900 border-2 border-purple-700 rounded-lg p-4">
@@ -268,6 +597,14 @@ const QRGenerator = () => {
 
       {/* Hidden canvas for processing */}
       <canvas ref={canvasRef} className="hidden" />
+      
+      {/* File Selector Modal */}
+      <FileSelector
+        isOpen={isFileSelectorOpen}
+        onClose={() => setIsFileSelectorOpen(false)}
+        onSelectFile={(file) => setSelectedFile(file)}
+        title="Select a File to Summon"
+      />
     </div>
   );
 };

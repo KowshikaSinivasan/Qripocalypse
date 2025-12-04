@@ -1,4 +1,6 @@
 import React, { useRef, useState } from 'react';
+import { retrieveQRData } from './services/qrStorageService';
+import { addToRecentSummons } from './services/qrStorageService';
 
 const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTextFile, decodeGrid }) => {
   const videoRef = useRef(null);
@@ -9,6 +11,7 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [scanResult, setScanResult] = useState('');
+  const [scannedData, setScannedData] = useState(null);
 
   const startCamera = async () => {
     try {
@@ -159,11 +162,10 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
       img.onload = async () => {
         try {
           const objectId = await processImage(img);
-          const result = `ObjectId: ${objectId}`;
-          setScanResult(result);
-          onScanResult(objectId);
+          handleScanComplete(objectId);
         } catch (error) {
           setScanResult(`Error: ${error.message}`);
+          setScannedData(null);
         } finally {
           setProcessing(false);
         }
@@ -189,19 +191,61 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
         const decodedOid = decodeGrid(grid, 24);
         
         if (decodedOid && decodedOid.length === 24) {
-          const result = `ObjectId: ${decodedOid}`;
-          setScanResult(result);
-          onScanResult(decodedOid);
+          handleScanComplete(decodedOid);
         } else {
           throw new Error('Failed to decode valid ObjectId from grid pattern');
         }
       } catch (error) {
         setScanResult(`Error: ${error.message}`);
+        setScannedData(null);
       } finally {
         setProcessing(false);
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleScanComplete = (objectId) => {
+    // Retrieve QR data from localStorage
+    const qrData = retrieveQRData(objectId);
+    
+    if (!qrData) {
+      setScanResult(`Error: QR code not found (ID: ${objectId})`);
+      setScannedData(null);
+      return;
+    }
+    
+    // Set scanned data for display
+    setScannedData(qrData);
+    setScanResult(`✅ Successfully scanned ${qrData.type} QR code!`);
+    
+    // Add to recent summons
+    addToRecentSummons({
+      id: qrData.id,
+      type: qrData.type,
+      name: getDisplayName(qrData),
+      timestamp: qrData.timestamp
+    });
+    
+    // Notify parent
+    onScanResult(objectId);
+  };
+  
+  const getDisplayName = (qrData) => {
+    switch (qrData.type) {
+      case 'theme':
+        return qrData.data.themeName;
+      case 'diff':
+        return `${qrData.data.projectName} - ${qrData.data.summary.substring(0, 30)}`;
+      case 'commit':
+        return `${qrData.data.projectName} - ${qrData.data.message.substring(0, 30)}`;
+      case 'projectFile':
+        return `${qrData.data.projectName} - ${qrData.data.fileName}`;
+      case 'deployment':
+        return `${qrData.data.projectName} - ${qrData.data.platform}`;
+      default:
+        return 'Unknown';
+    }
   };
 
   const handleScan = async () => {
@@ -214,20 +258,19 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
       
       // Then process it
       const objectId = await processImage(capturedCanvas);
-      const result = `ObjectId: ${objectId}`;
-      setScanResult(result);
-      onScanResult(objectId);
+      handleScanComplete(objectId);
     } catch (error) {
       setScanResult(`Error: ${error.message}`);
+      setScannedData(null);
     } finally {
       setProcessing(false);
     }
   };
 
   const simulateScan = () => {
-    const result = 'Dracula has been summoned! 🧛 (Simulated ObjectId: 5f8d0d55b54764421b7156c7)';
-    setScanResult(result);
-    onScanResult('5f8d0d55b54764421b7156c7');
+    // Simulate scanning a theme QR code
+    const simulatedId = '507f1f77bcf86cd799439011';
+    handleScanComplete(simulatedId);
   };
 
   return (

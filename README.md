@@ -407,6 +407,64 @@ The FileSelector component is designed to be used across multiple pages in the G
 
 The component automatically closes after file selection and provides complete file metadata including project context for proper file handling.
 
+### PremiumDialog Component
+
+A reusable modal component for displaying premium/locked feature notifications (`src/components/PremiumDialog.jsx`):
+
+**Features:**
+
+- Spooky modal overlay with haunted theme styling
+- Backdrop click-to-close functionality
+- Animated ghost and skull decorations
+- Customizable feature name display
+- Accessible with ARIA attributes (role, aria-modal, aria-labelledby)
+- Gradient background with glowing border effects
+- Multiple action buttons (primary and secondary)
+
+**Props:**
+
+```javascript
+{
+  isOpen: boolean,                        // Controls modal visibility
+  onClose: () => void,                    // Callback when modal is closed
+  featureName: string                     // Name of the locked feature (default: "Premium Feature")
+}
+```
+
+**Usage:**
+
+```javascript
+import PremiumDialog from "./components/PremiumDialog";
+
+function MyComponent() {
+  const [showPremium, setShowPremium] = useState(false);
+
+  const handleLockedFeature = () => {
+    setShowPremium(true);
+  };
+
+  return (
+    <>
+      <button onClick={handleLockedFeature}>Try Premium Feature</button>
+
+      <PremiumDialog
+        isOpen={showPremium}
+        onClose={() => setShowPremium(false)}
+        featureName="Advanced Code Analysis"
+      />
+    </>
+  );
+}
+```
+
+**Styling:**
+
+- Purple and black gradient background with glowing border
+- Creepster font for headings
+- Animated ghost (👻), skull (💀), spider (🕷️), bat (🦇), and web (🕸️) emojis
+- Pulse and bounce animations for decorative elements
+- Responsive design with max-width constraint
+
 ### Terminal Page Enhancement (Latest - Task 6)
 
 The Terminal (NecroTerminal) page has been enhanced with project selection and commit integration:
