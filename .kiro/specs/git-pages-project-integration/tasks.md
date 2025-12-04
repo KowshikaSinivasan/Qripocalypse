@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Create commit generator utility
+- [x] 1. Create commit generator utility
 
   - Create `src/utils/commitGenerator.jsx` with function to generate simulated commits for projects
   - Generate 2-5 commits per project with realistic data (hash, message, author, date, changes)
@@ -8,7 +8,7 @@
   - Assign haunted characters based on change magnitude
   - _Requirements: 6.1, 6.4_
 
-- [ ] 2. Create FileSelector component
+- [x] 2. Create FileSelector component
 
   - Create `src/components/FileSelector.jsx` as a reusable modal component
   - Fetch projects from `useProjects()` hook
@@ -18,7 +18,7 @@
   - Include close button and backdrop click to close modal
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 3. Enhance NecroDiff page with file selection
+- [x] 3. Enhance NecroDiff page with file selection
 
   - Add state for selected files and file selector modals (old and new sides)
   - Add "Select File" buttons above each textarea (styled to match existing theme)

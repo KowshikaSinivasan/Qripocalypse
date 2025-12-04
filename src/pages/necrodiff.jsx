@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Ghost, Skull, Flame, Zap, AlertTriangle, FileCode } from 'lucide-react';
+import FileSelector from '../components/FileSelector';
 
 const NecroDiff = () => {
   const [oldCode, setOldCode] = useState('');
@@ -8,6 +9,12 @@ const NecroDiff = () => {
   const [diffs, setDiffs] = useState([]);
   const [glitchEffect, setGlitchEffect] = useState(false);
   const [titleGlitch, setTitleGlitch] = useState(false);
+  
+  // File selection state
+  const [selectedOldFile, setSelectedOldFile] = useState(null);
+  const [selectedNewFile, setSelectedNewFile] = useState(null);
+  const [showOldFileSelector, setShowOldFileSelector] = useState(false);
+  const [showNewFileSelector, setShowNewFileSelector] = useState(false);
 
   const hauntedCharacters = [
     { name: 'Dracula', type: 'deletion', icon: '🧛', color: 'text-red-600', message: 'This line... drained of life.' },
@@ -26,6 +33,17 @@ const NecroDiff = () => {
     
     return () => clearInterval(glitchInterval);
   }, []);
+
+  // File selection handlers
+  const handleOldFileSelect = (file) => {
+    setSelectedOldFile(file);
+    setOldCode(file.content);
+  };
+
+  const handleNewFileSelect = (file) => {
+    setSelectedNewFile(file);
+    setNewCode(file.content);
+  };
 
   const compareCode = () => {
     setComparing(true);
@@ -287,6 +305,27 @@ const NecroDiff = () => {
               <Skull size={20} />
               <span>THE PAST</span>
             </div>
+            
+            {/* File selector button */}
+            <div className="mb-3">
+              <button
+                onClick={() => setShowOldFileSelector(true)}
+                className="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded flex items-center gap-2 transition-colors text-sm font-semibold"
+                style={{ fontFamily: "'Creepster', cursive" }}
+              >
+                <FileCode size={16} />
+                Select File
+              </button>
+            </div>
+
+            {/* File path display */}
+            {selectedOldFile && (
+              <div className="mb-2 text-xs text-red-300 bg-black/40 px-3 py-2 rounded border border-red-800">
+                <div className="font-semibold">{selectedOldFile.projectName}</div>
+                <div className="text-gray-400">{selectedOldFile.path}</div>
+              </div>
+            )}
+
             <textarea
               value={oldCode}
               onChange={(e) => setOldCode(e.target.value)}
@@ -303,6 +342,27 @@ const NecroDiff = () => {
               <Zap size={20} />
               <span>THE PRESENT</span>
             </div>
+            
+            {/* File selector button */}
+            <div className="mb-3">
+              <button
+                onClick={() => setShowNewFileSelector(true)}
+                className="bg-purple-800 hover:bg-purple-700 text-white px-4 py-2 rounded flex items-center gap-2 transition-colors text-sm font-semibold"
+                style={{ fontFamily: "'Creepster', cursive" }}
+              >
+                <FileCode size={16} />
+                Select File
+              </button>
+            </div>
+
+            {/* File path display */}
+            {selectedNewFile && (
+              <div className="mb-2 text-xs text-purple-300 bg-black/40 px-3 py-2 rounded border border-purple-800">
+                <div className="font-semibold">{selectedNewFile.projectName}</div>
+                <div className="text-gray-400">{selectedNewFile.path}</div>
+              </div>
+            )}
+
             <textarea
               value={newCode}
               onChange={(e) => setNewCode(e.target.value)}
@@ -461,6 +521,21 @@ const NecroDiff = () => {
           <p className="text-xs mt-2">May your code rest in peace... or rise again stronger</p>
         </div>
       </div>
+
+      {/* File Selector Modals */}
+      <FileSelector
+        isOpen={showOldFileSelector}
+        onClose={() => setShowOldFileSelector(false)}
+        onSelectFile={handleOldFileSelect}
+        title="Select Old Code from the Spirit Realm"
+      />
+      
+      <FileSelector
+        isOpen={showNewFileSelector}
+        onClose={() => setShowNewFileSelector(false)}
+        onSelectFile={handleNewFileSelect}
+        title="Select New Code from the Spirit Realm"
+      />
 
       <style jsx>{`
         @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&family=Eater&display=swap');

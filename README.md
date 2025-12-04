@@ -25,6 +25,7 @@ src/
 ├── components/          # Reusable React components
 │   ├── projectContext.jsx    # Project state management
 │   ├── ProjectSelector.jsx   # Project dropdown selector with persistence
+│   ├── FileSelector.jsx      # File selection modal for project files
 │   ├── ghostpopup.jsx        # Ghost notification component
 │   ├── WatchingGhost.jsx     # Animated ghost component
 │   └── ...
@@ -39,6 +40,7 @@ src/
 │   ├── authService.jsx       # Authentication logic
 │   └── storageService.jsx    # LocalStorage operations
 ├── utils/              # Utility functions
+│   ├── commitGenerator.jsx   # Simulated commit data generation
 │   ├── deploymentUtils.jsx   # Deployment helpers
 │   ├── simulationUtils.jsx   # Simulation logic
 │   ├── storageHelpers.jsx    # localStorage helpers for deployment configs
@@ -324,6 +326,138 @@ Realistic simulation functions for DevOps operations (`src/utils/simulationUtils
 - Log level filtering (DEBUG, INFO, WARN, ERROR)
 - Metrics within realistic ranges (CPU: 15-85%, Memory: 30-75%, etc.)
 
+### FileSelector Component
+
+A reusable modal component for selecting files from projects (`src/components/FileSelector.jsx`):
+
+**Features:**
+
+- Modal overlay with backdrop click-to-close functionality
+- Displays all projects from ProjectContext with expandable/collapsible project sections
+- Shows file count and project type for each project
+- Lists all files within each project with file path and language indicators
+- Hover effects and visual feedback for better UX
+- Empty state handling for projects with no files
+- Haunted theme styling consistent with the application
+- Keyboard-accessible close button
+
+**Props:**
+
+```javascript
+{
+  isOpen: boolean,                        // Controls modal visibility
+  onClose: () => void,                    // Callback when modal is closed
+  onSelectFile: (fileData) => void,       // Callback when file is selected
+  title: string                           // Optional modal title (default: "Select a File from the Spirit Realm")
+}
+```
+
+**FileData Object Structure:**
+
+When a file is selected, the component passes an enhanced file object to the `onSelectFile` callback:
+
+```javascript
+{
+  id: number,              // File ID
+  name: string,            // File name
+  content: string,         // File content
+  type: 'file',           // File type
+  language: string,        // Programming language
+  path: string,           // File path
+  projectName: string,    // Project name (added by FileSelector)
+  projectId: number       // Project ID (added by FileSelector)
+}
+```
+
+**Usage:**
+
+```javascript
+import FileSelector from "./components/FileSelector";
+
+function MyComponent() {
+  const [showFileSelector, setShowFileSelector] = useState(false);
+
+  const handleFileSelect = (fileData) => {
+    console.log(`Selected ${fileData.name} from ${fileData.projectName}`);
+    // Use fileData.content, fileData.projectId, etc.
+  };
+
+  return (
+    <>
+      <button onClick={() => setShowFileSelector(true)}>Select File</button>
+
+      <FileSelector
+        isOpen={showFileSelector}
+        onClose={() => setShowFileSelector(false)}
+        onSelectFile={handleFileSelect}
+        title="Choose a haunted file"
+      />
+    </>
+  );
+}
+```
+
+**Integration:**
+
+The FileSelector component is designed to be used across multiple pages in the Git Pages Project Integration feature:
+
+- **NecroDiff Page** - Select files for old/new code comparison panels
+- **Ritual Page** - Select files for HEAD/FEATURE merge conflict resolution
+- **Terminal Page** - Select project context for Git command execution
+
+The component automatically closes after file selection and provides complete file metadata including project context for proper file handling.
+
+### Commit Generator Utility
+
+A utility for generating simulated commit data for projects (`src/utils/commitGenerator.jsx`):
+
+**Features:**
+
+- Generates 2-5 commits per project with realistic data
+- Creates spooky-themed commit messages and author names
+- Assigns haunted characters (👻, 🧛, 💀) based on change magnitude
+- Simulates duplicate commit hashes across projects (10% chance)
+- Generates random dates within the last 30 days
+- Produces realistic additions/deletions counts
+- Sorts commits chronologically (newest first)
+
+**Core Functions:**
+
+- `generateCommitsForProjects(projects)` - Generate commits for multiple projects
+- `generateCommitsForProject(project)` - Generate commits for a single project
+
+**Commit Object Structure:**
+
+```javascript
+{
+  hash: string,           // 8-character hex hash
+  message: string,        // Spooky commit message
+  author: string,         // Random spooky author name
+  date: string,          // ISO date string (last 30 days)
+  changes: string,       // Format: "+12 -4"
+  ghost: string,         // Emoji based on change magnitude
+  epitaph: string,       // Spooky epitaph message
+  projectId: number,     // Associated project ID
+  projectName: string,   // Project name
+  isDuplicate: boolean   // True if hash appears in multiple projects
+}
+```
+
+**Usage:**
+
+```javascript
+import { generateCommitsForProjects } from "./utils/commitGenerator";
+
+const commits = generateCommitsForProjects(projectsList);
+// Returns array of commits sorted by date (newest first)
+```
+
+**Change Magnitude Mapping:**
+
+- Small (1-10 changes): 👻, 🕷️, 🦇
+- Medium (11-50 changes): 🧛, 🧟, 🧙‍♀️
+- Large (51+ changes): 💀, ☠️, 👹
+
 ### Deployment Models
 
 Comprehensive data models for the Enhanced Project Deployment system (`src/models/deploymentModels.jsx`):
@@ -422,7 +556,65 @@ function MyComponent() {
 
 ## Recent Updates
 
-### Docker Ritual Tab Implementation (Latest)
+### FileSelector Component (Latest)
+
+The FileSelector component has been implemented as a reusable modal for file selection across multiple pages:
+
+**Implementation:**
+
+- Created `src/components/FileSelector.jsx` with complete file selection UI
+- Modal overlay with backdrop click-to-close and explicit close button
+- Expandable/collapsible project sections showing file count and type
+- File list with name, path, and language indicators
+- Hover effects and visual feedback for better user experience
+- Empty state handling for projects without files
+- Consistent haunted theme styling with purple accents
+
+**Features:**
+
+- Integrates with ProjectContext to display all available projects
+- Returns enhanced file data including projectName and projectId
+- Supports custom modal titles via props
+- Keyboard accessible with proper ARIA labels
+- Automatically closes after file selection
+
+**Integration:**
+
+This component is designed for the Git Pages Project Integration feature and will be used in:
+
+- NecroDiff page for selecting files to compare
+- Ritual page for selecting files to merge
+- Terminal page for project context selection
+
+This completes Task 2 of the Git Pages Project Integration specification.
+
+### Commit Generator Utility
+
+The commit generator utility has been implemented to support the Git Pages Project Integration feature:
+
+**Implementation:**
+
+- Created `src/utils/commitGenerator.jsx` with complete commit generation logic
+- Generates 2-5 commits per project with realistic metadata
+- Implements duplicate hash detection (10% chance across projects)
+- Assigns haunted characters based on change magnitude (small/medium/large)
+- Produces spooky-themed commit messages with file name interpolation
+- Generates random dates within the last 30 days
+- Sorts commits chronologically (newest first)
+
+**Data Generation:**
+
+- 12 spooky author names (e.g., "Count Commitula", "Morticia Merge")
+- 20 commit message templates with {file} placeholder support
+- 3 tiers of haunted characters based on change size
+- 10 spooky epitaphs for tombstone display
+- Realistic additions/deletions counts (1-100 additions, 0-50 deletions)
+
+**Integration:**
+
+This utility is designed to be used by the Graveyard page to display commit history with project filtering and duplicate detection. It completes Task 1 of the Git Pages Project Integration specification.
+
+### Docker Ritual Tab Implementation
 
 The Docker Ritual tab has been fully implemented with complete Docker image build and management capabilities:
 
@@ -638,13 +830,15 @@ The Deployment Panel tab integrates seamlessly with the deployment history syste
 
 ## Development Roadmap
 
+### Enhanced Project Deployment
+
 See `.kiro/specs/enhanced-project-deployment/` for detailed specifications on the deployment system:
 
 - `requirements.md` - Feature requirements and acceptance criteria
 - `design.md` - System architecture and component design
 - `tasks.md` - Implementation tasks and progress
 
-**Completed (Tasks 1-7):**
+**Completed (Tasks 1-8):**
 
 - ✅ Data models and simulation utilities
 - ✅ ProjectSelector component with persistence
@@ -669,10 +863,7 @@ See `.kiro/specs/enhanced-project-deployment/` for detailed specifications on th
 - ✅ Deployment history list with last 10 deployments
 - ✅ Visual timeline with chronological ordering
 - ✅ Detailed deployment modal with full logs and redeploy functionality
-
-**In Progress:**
-
-- Monitoring Panel with real-time metrics (Task 8)
+- ✅ Monitoring Panel tab with real-time metrics, health status, and alerts
 
 **Upcoming:**
 
@@ -680,6 +871,31 @@ See `.kiro/specs/enhanced-project-deployment/` for detailed specifications on th
 - Integration testing for all simulation flows
 - UI polish and smooth transitions
 - Toast notifications for operations
+
+### Git Pages Project Integration
+
+See `.kiro/specs/git-pages-project-integration/` for detailed specifications:
+
+- `requirements.md` - Feature requirements and acceptance criteria
+- `design.md` - System architecture and component design
+- `tasks.md` - Implementation tasks and progress
+
+**Completed (Task 1):**
+
+- ✅ Commit generator utility (`src/utils/commitGenerator.jsx`)
+- ✅ Generates 2-5 commits per project with realistic data
+- ✅ Duplicate hash detection (10% chance across projects)
+- ✅ Haunted character assignment based on change magnitude
+- ✅ Spooky-themed commit messages and author names
+- ✅ Chronological sorting (newest first)
+
+**Upcoming:**
+
+- FileSelector component for project/file selection
+- NecroDiff page enhancement with file selection
+- Graveyard page enhancement with commit display and project filtering
+- Ritual page enhancement with file selection
+- Terminal page enhancement with project-specific commands
 
 ## Vite Configuration
 
