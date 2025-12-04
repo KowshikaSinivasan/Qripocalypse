@@ -9,7 +9,7 @@
   - Create AlertGenerator.jsx utility to detect code issues (cursed loops, dead variables, suspicious logic, missing error handling, security issues)
   - _Requirements: 1.2, 3.1, 3.2, 3.3, 6.1, 6.2, 9.1-9.5, 10.4, 10.5_
 
-- [ ] 2. Enhance QR Portal with multiple summon types
+- [x] 2. Enhance QR Portal with multiple summon types
 
   - Update qrportal.jsx to REMOVE character summon - keep ONLY: theme, diff summary, commit, project file, deployment info
   - Enhance QRGenerator.jsx with type-specific inputs (project selector for projectFile/deployment, FileSelector integration)
@@ -20,7 +20,7 @@
   - Add syntax highlighting for project file display
   - _Requirements: 1.1-1.5, 2.1-2.5, 7.1-7.5, 8.1-8.5, 10.1-10.3_
 
-- [ ] 3. Update Characters page
+- [x] 3. Update Characters page
 
   - Add PersonaSelector dropdown at top to choose active persona
   - REMOVE "Go to QR Portal" button completely
@@ -28,7 +28,7 @@
   - Add localStorage integration for persona persistence
   - _Requirements: 3.1-3.5_
 
-- [ ] 4. Update Themes page
+- [x] 4. Update Themes page
 
   - Replace "QR Code" placeholder in white preview box with active theme icon
   - Display Dracula icon (🧛) for dracula theme, flickering ghost (👻 animated) for possession theme

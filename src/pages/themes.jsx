@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import PremiumDialog from '../components/PremiumDialog';
 
 const Themes = () => {
   const [activeTheme, setActiveTheme] = useState('dracula');
+  const [showPremiumDialog, setShowPremiumDialog] = useState(false);
 
   const themes = [
     {
@@ -115,9 +117,14 @@ const Themes = () => {
           </p>
           
           <div className="flex flex-col md:flex-row gap-6 items-center justify-center">
-            <div className="bg-white p-4 rounded-lg">
-              <div className="w-32 h-32 bg-gray-300 flex items-center justify-center text-gray-600">
-                QR Code
+            <div className="bg-gray-200 p-4 rounded-lg border border-white" style={{ borderWidth: '10px' }}>
+              <div className="w-32 h-32 flex items-center justify-center text-6xl">
+                {activeTheme === 'dracula' && '🧛'}
+                {activeTheme === 'possession' && (
+                  <span className="animate-pulse">👻</span>
+                )}
+                {activeTheme === 'frankenstein' && '🧟'}
+                {activeTheme === 'ghost' && '💀'}
               </div>
             </div>
             
@@ -126,12 +133,22 @@ const Themes = () => {
               <p className="text-gray-400 text-sm mb-4">
                 Scan this code to activate <strong>{themes.find(t => t.id === activeTheme)?.name}</strong> on any device
               </p>
-              <button className="bg-orange-900 hover:bg-orange-800 text-white px-6 py-3 rounded-lg font-bold transition-colors">
+              <button 
+                onClick={() => setShowPremiumDialog(true)}
+                className="bg-orange-900 hover:bg-orange-800 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+              >
                 Generate New QR
               </button>
             </div>
           </div>
         </div>
+
+        {/* Premium Dialog */}
+        <PremiumDialog 
+          isOpen={showPremiumDialog}
+          onClose={() => setShowPremiumDialog(false)}
+          featureName="QR Theme Generation"
+        />
       </div>
     </div>
   );

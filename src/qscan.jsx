@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { retrieveQRData } from './services/qrStorageService';
 import { addToRecentSummons } from './services/qrStorageService';
 
-const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTextFile, decodeGrid }) => {
+const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTextFile, decodeGrid, scannedData: externalScannedData }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [stream, setStream] = useState(null);
@@ -12,6 +12,13 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
   const [capturedImage, setCapturedImage] = useState(null);
   const [scanResult, setScanResult] = useState('');
   const [scannedData, setScannedData] = useState(null);
+
+  // Update local scannedData when external prop changes
+  React.useEffect(() => {
+    if (externalScannedData) {
+      setScannedData(externalScannedData);
+    }
+  }, [externalScannedData]);
 
   const startCamera = async () => {
     try {
@@ -227,8 +234,8 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
       timestamp: qrData.timestamp
     });
     
-    // Notify parent
-    onScanResult(objectId);
+    // Notify parent with both objectId and data
+    onScanResult(objectId, qrData);
   };
   
   const getDisplayName = (qrData) => {
@@ -271,6 +278,157 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
     // Simulate scanning a theme QR code
     const simulatedId = '507f1f77bcf86cd799439011';
     handleScanComplete(simulatedId);
+  };
+
+  // Render scanned data based on type
+  const renderScannedData = () => {
+    if (!scannedData) return null;
+
+    const { type, data } = scannedData;
+
+    switch (type) {
+      case 'theme':
+        return (
+          <div className="bg-purple-900/30 border border-purple-700 rounded-lg p-4">
+            <h4 className="text-purple-400 font-bold mb-3 flex items-center gap-2">
+              <span className="text-2xl">{data.icon}</span>
+              Theme Summoned
+            </h4>
+            <div className="space-y-2 text-sm">
+              <p className="text-white"><strong>Theme:</strong> {data.themeName}</p>
+              <p className="text-gray-300"><strong>ID:</strong> {data.themeId}</p>
+              {data.colors && (
+                <div className="flex gap-2 mt-2">
+                  <div 
+                    className="w-12 h-12 rounded border-2 border-white" 
+                    style={{ backgroundColor: data.colors.primary }}
+                    title="Primary Color"
+                  />
+                  <div 
+                    className="w-12 h-12 rounded border-2 border-white" 
+                    style={{ backgroundColor: data.colors.secondary }}
+                    title="Secondary Color"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'diff':
+        return (
+          <div className="bg-green-900/30 border border-green-700 rounded-lg p-4">
+            <h4 className="text-green-400 font-bold mb-3 flex items-center gap-2">
+              <span className="text-2xl">🔀</span>
+              Diff Summary Summoned
+            </h4>
+            <div className="space-y-2 text-sm">
+              <p className="text-white"><strong>Project:</strong> {data.projectName}</p>
+              <p className="text-gray-300"><strong>Summary:</strong> {data.summary}</p>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                <div className="bg-gray-800 rounded p-2 text-center">
+                  <div className="text-blue-400 font-bold">{data.filesChanged}</div>
+                  <div className="text-xs text-gray-400">Files</div>
+                </div>
+                <div className="bg-gray-800 rounded p-2 text-center">
+                  <div className="text-green-400 font-bold">+{data.additions}</div>
+                  <div className="text-xs text-gray-400">Added</div>
+                </div>
+                <div className="bg-gray-800 rounded p-2 text-center">
+                  <div className="text-red-400 font-bold">-{data.deletions}</div>
+                  <div className="text-xs text-gray-400">Deleted</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'commit':
+        return (
+          <div className="bg-gray-700/30 border border-gray-600 rounded-lg p-4">
+            <h4 className="text-gray-300 font-bold mb-3 flex items-center gap-2">
+              <span className="text-2xl">⚰️</span>
+              Commit Summoned
+            </h4>
+            <div className="space-y-2 text-sm">
+              <p className="text-white"><strong>Project:</strong> {data.projectName}</p>
+              <p className="text-gray-300"><strong>Message:</strong> {data.message}</p>
+              <p className="text-gray-400"><strong>Author:</strong> {data.author}</p>
+              <p className="text-gray-400"><strong>Hash:</strong> <code className="bg-gray-800 px-2 py-1 rounded">{data.commitHash}</code></p>
+              <p className="text-gray-500 text-xs"><strong>Time:</strong> {new Date(data.timestamp).toLocaleString()}</p>
+            </div>
+          </div>
+        );
+
+      case 'projectFile':
+        return (
+          <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4">
+            <h4 className="text-blue-400 font-bold mb-3 flex items-center gap-2">
+              <span className="text-2xl">📄</span>
+              Project File Summoned
+            </h4>
+            <div className="space-y-2 text-sm">
+              <p className="text-white"><strong>Project:</strong> {data.projectName}</p>
+              <p className="text-gray-300"><strong>File:</strong> {data.fileName}</p>
+              <p className="text-gray-400"><strong>Path:</strong> {data.filePath}</p>
+              {data.language && (
+                <p className="text-gray-400"><strong>Language:</strong> {data.language}</p>
+              )}
+              {data.content && (
+                <div className="mt-3">
+                  <p className="text-gray-300 font-bold mb-2">Content:</p>
+                  <pre className="bg-gray-900 border border-gray-700 rounded p-3 text-xs overflow-x-auto max-h-64 overflow-y-auto">
+                    <code className="text-green-400">{data.content}</code>
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'deployment':
+        return (
+          <div className="bg-orange-900/30 border border-orange-700 rounded-lg p-4">
+            <h4 className="text-orange-400 font-bold mb-3 flex items-center gap-2">
+              <span className="text-2xl">🚀</span>
+              Deployment Info Summoned
+            </h4>
+            <div className="space-y-2 text-sm">
+              <p className="text-white"><strong>Project:</strong> {data.projectName}</p>
+              <p className="text-gray-300"><strong>Platform:</strong> {data.platform.toUpperCase()}</p>
+              <p className="text-gray-400">
+                <strong>Status:</strong>{' '}
+                <span className={`px-2 py-1 rounded text-xs font-bold ${
+                  data.status === 'active' ? 'bg-green-900 text-green-300' :
+                  data.status === 'pending' ? 'bg-yellow-900 text-yellow-300' :
+                  'bg-red-900 text-red-300'
+                }`}>
+                  {data.status.toUpperCase()}
+                </span>
+              </p>
+              {data.lastDeployed && (
+                <p className="text-gray-500 text-xs"><strong>Last Deployed:</strong> {new Date(data.lastDeployed).toLocaleString()}</p>
+              )}
+              {data.configuration && (
+                <div className="mt-3">
+                  <p className="text-gray-300 font-bold mb-2">Configuration:</p>
+                  <pre className="bg-gray-900 border border-gray-700 rounded p-3 text-xs overflow-x-auto max-h-48 overflow-y-auto">
+                    <code className="text-orange-400">{JSON.stringify(data.configuration, null, 2)}</code>
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <h4 className="text-gray-400 font-bold mb-3">Unknown Type</h4>
+            <p className="text-gray-500 text-sm">Cannot display data for type: {type}</p>
+          </div>
+        );
+    }
   };
 
   return (
@@ -318,11 +476,16 @@ const QRScanner = ({ scanning, onScanResult, onStartScan, onStopScan, processTex
 
         {/* Scan Result */}
         {scanResult && (
-          <div className="bg-green-900/30 border border-green-700 rounded-lg p-4">
-            <h4 className="text-green-400 font-bold mb-2">Summoning Detected!</h4>
-            <p className="text-green-300">{scanResult}</p>
+          <div className={`${scanResult.includes('Error') ? 'bg-red-900/30 border-red-700' : 'bg-green-900/30 border-green-700'} border rounded-lg p-4`}>
+            <h4 className={`${scanResult.includes('Error') ? 'text-red-400' : 'text-green-400'} font-bold mb-2`}>
+              {scanResult.includes('Error') ? '❌ Summoning Failed!' : '✨ Summoning Detected!'}
+            </h4>
+            <p className={`${scanResult.includes('Error') ? 'text-red-300' : 'text-green-300'}`}>{scanResult}</p>
           </div>
         )}
+
+        {/* Scanned Data Display */}
+        {scannedData && renderScannedData()}
 
         {/* Upload Status */}
         {uploadedFile && (

@@ -38,7 +38,8 @@ src/
 │   └── ...
 ├── services/           # Business logic and API services
 │   ├── authService.jsx       # Authentication logic
-│   └── storageService.jsx    # LocalStorage operations
+│   ├── storageService.jsx    # LocalStorage operations
+│   └── qrStorageService.jsx  # QR code data persistence
 ├── utils/              # Utility functions
 │   ├── commitGenerator.jsx   # Simulated commit data generation
 │   ├── deploymentUtils.jsx   # Deployment helpers
@@ -272,6 +273,37 @@ function MyComponent() {
 
 **Integration:** The ProjectSelector component is now integrated into the ProjectSettings page, enabling users to select which project they want to configure for deployment. The selected project persists across page refreshes using localStorage.
 
+### QR Storage Service
+
+Service for managing QR code data and recent summons history (`src/services/qrStorageService.jsx`):
+
+**Core Functions:**
+
+- `saveQRData(type, data)` - Save QR data to localStorage with unique ID
+- `retrieveQRData(id)` - Retrieve QR data by ID
+- `getRecentSummons(limit)` - Get recent summons history (default 20)
+- `addToRecentSummons(qr)` - Add entry to recent summons
+- `deleteQRData(id)` - Delete specific QR data
+- `clearAllQRData()` - Clear all QR data from storage
+- `generateUniqueId()` - Generate 24-character hex ID (ObjectId-like)
+- `encodeToObjectId(text)` - Encode text to ObjectId-like hex string
+
+**Supported QR Types:**
+
+- `theme` - Theme switching QR codes (🎨)
+- `diff` - Code diff QR codes (🔀)
+- `commit` - Commit history QR codes (⚰️)
+- `projectFile` - Project file QR codes (📄)
+- `deployment` - Deployment configuration QR codes (🚀)
+
+**Features:**
+
+- Automatic storage quota management
+- Recent summons history (last 20 entries)
+- Type-specific icon mapping
+- Timestamp tracking for all QR codes
+- Safe JSON parsing with error handling
+
 ### Storage Helpers
 
 Utility functions for managing deployment configurations and project data (`src/utils/storageHelpers.jsx`):
@@ -464,6 +496,123 @@ function MyComponent() {
 - Animated ghost (👻), skull (💀), spider (🕷️), bat (🦇), and web (🕸️) emojis
 - Pulse and bounce animations for decorative elements
 - Responsive design with max-width constraint
+
+**Integration:**
+
+The PremiumDialog component is integrated into multiple pages:
+
+- **Characters Page** (`src/pages/characters.jsx`) - Locks "Summoning Spells" feature
+- **Themes Page** (`src/pages/themes.jsx`) - Locks "QR Theme Generation" feature
+
+### PersonaSelector Component
+
+A reusable dropdown component for selecting haunted character personas (`src/components/PersonaSelector.jsx`):
+
+**Features:**
+
+- Dropdown selector for character personas
+- Displays character emoji and name
+- Haunted theme styling with purple accents
+- Integrates with Characters page for persona selection
+
+**Props:**
+
+```javascript
+{
+  characters: Character[],                // Array of character objects
+  selectedPersona: string,                // Currently selected persona ID
+  onSelect: (personaId: string) => void   // Callback when persona is selected
+}
+```
+
+**Character Object Structure:**
+
+```javascript
+{
+  id: string,              // Unique identifier (e.g., 'dracula', 'witch')
+  name: string,            // Display name
+  emoji: string,           // Character emoji
+  role: string,            // Character role/specialty
+  description: string,     // Character description
+  personality: string,     // Personality traits
+  abilities: string[],     // List of abilities
+  quote: string           // Signature quote
+}
+```
+
+**Usage:**
+
+```javascript
+import PersonaSelector from "./components/PersonaSelector";
+
+function MyComponent() {
+  const [selectedPersona, setSelectedPersona] = useState("");
+
+  return (
+    <PersonaSelector
+      characters={characters}
+      selectedPersona={selectedPersona}
+      onSelect={setSelectedPersona}
+    />
+  );
+}
+```
+
+**Integration:**
+
+The PersonaSelector component is integrated into the Characters page (`src/pages/characters.jsx`) to allow users to select their preferred haunted persona for code interactions.
+
+### Characters Page (Haunted Personas)
+
+A showcase page for the haunted character personas that power QRipocalypse (`src/pages/characters.jsx`):
+
+**Features:**
+
+- **Character Gallery** - Grid display of 6 haunted personas with detailed information
+- **PersonaSelector Integration** - Dropdown to select active persona
+- **PremiumDialog Integration** - Modal for locked "Summoning Spells" feature
+- **Character Details** - Each character card displays:
+  - Name, role, and emoji icon
+  - Description and personality traits
+  - List of special abilities
+  - Signature quote
+- **Haunted Theming** - Color-coded cards matching each character's theme (red, green, purple, gray, black, orange)
+
+**Character Personas:**
+
+1. **Count Dracula** (🧛) - Deletion Specialist - Removes code and drains bugs
+2. **Frankenstein's Monster** (🧟) - Modification Expert - Patches code together
+3. **Witch of Mutations** (🧙‍♀️) - Conflict Resolver - Resolves merge conflicts
+4. **Ghost of Commit Past** (👻) - History Keeper - Remembers all commits
+5. **The Reaper** (💀) - Code Execution - Terminates processes and cleans dead code
+6. **Poltergeist Debugger** (🔮) - Error Detection - Finds hidden bugs
+
+**State Management:**
+
+```javascript
+{
+  selectedPersona: string,           // Currently selected persona ID
+  showPremiumDialog: boolean         // Premium dialog visibility
+}
+```
+
+**Character Data Structure:**
+
+Each character includes:
+
+- `id` - Unique identifier for selection
+- `name` - Character display name
+- `role` - Specialty/function
+- `icon` / `emoji` - Visual representation
+- `color` - Theme color for styling
+- `description` - Character overview
+- `personality` - Personality traits
+- `abilities` - Array of special abilities
+- `quote` - Signature catchphrase
+
+**Usage:**
+
+The Characters page serves as both an informational showcase and a persona selection interface, allowing users to learn about and choose their preferred haunted coding assistant.
 
 ### Terminal Page Enhancement (Latest - Task 6)
 
@@ -680,6 +829,44 @@ A haunted code comparison tool (`src/pages/necrodiff.jsx`) that visualizes diffe
 - Preserves manual input capability alongside file selection
 - Part of the Git Pages Project Integration feature (Task 3)
 
+### QR Portal Page
+
+A mystical QR code generation and scanning interface (`src/pages/qrportal.jsx`) for summoning various haunted features:
+
+**Features:**
+
+- **Multiple Summon Types** - Generate QR codes for different purposes:
+  - Theme switching (🎨) - Instantly change visual themes
+  - Code diffs (🔀) - Share code comparisons
+  - Commit history (⚰️) - Create grave QR codes from commits
+  - Project files (📄) - Share specific project files
+  - Deployment info (🚀) - Share deployment configurations
+- **QR Code Generation** - Create QR codes with embedded data using QRGenerator component
+- **QR Code Scanning** - Scan QR codes using device camera with QRScanner component
+- **Recent Summons History** - View last 20 generated QR codes with timestamps
+- **Persistent Storage** - All QR data saved to localStorage via qrStorageService
+- **Tab Navigation** - Switch between Generate and Scan modes
+- **Haunted Aesthetic** - Spooky UI with purple/green accents and ghost animations
+
+**State Management:**
+
+```javascript
+{
+  activeTab: 'generate' | 'scan',     // Current tab
+  scanning: boolean,                   // Scanning in progress
+  recentCodes: array,                  // Recent summons from localStorage
+  scannedData: object | null          // Data from scanned QR code
+}
+```
+
+**Integration:**
+
+- Uses `qrStorageService` for persistent QR data storage
+- Integrates with `QRGenerator` component for code generation
+- Integrates with `QRScanner` component for code scanning
+- Loads recent summons on mount via `useEffect`
+- Part of the QR Portal Enhancement feature
+
 ### Deployment Models
 
 Comprehensive data models for the Enhanced Project Deployment system (`src/models/deploymentModels.jsx`):
@@ -778,7 +965,34 @@ function MyComponent() {
 
 ## Recent Updates
 
-### Terminal Page Enhancement (Latest - Task 6)
+### QR Portal Enhancement (Latest)
+
+The QR Portal page has been enhanced with localStorage persistence and expanded summon types:
+
+**Changes:**
+
+- Integrated `qrStorageService` for persistent QR data storage
+- Added `useEffect` hook to load recent summons from localStorage on mount
+- Removed hardcoded mock data in favor of dynamic data from storage
+- Added `scannedData` state for handling scanned QR code results
+- Removed "Summon a Character" option (character summoning)
+- Added two new summon types:
+  - **Summon a Project File** (📄) - Generate QR codes for specific project files
+  - **Summon Deployment Info** (🚀) - Create QR codes with deployment configurations
+- Recent codes now display actual saved QR summons with timestamps
+- All QR data persists across page refreshes via localStorage
+
+**Supported Summon Types:**
+
+- Theme switching (🎨)
+- Code diffs (🔀)
+- Commit history (⚰️)
+- Project files (📄)
+- Deployment configurations (🚀)
+
+**Status:** Enhances QR Portal with persistent storage and expanded functionality.
+
+### Terminal Page Enhancement (Task 6)
 
 The Terminal (NecroTerminal) page has been enhanced with project selection and commit integration capabilities:
 

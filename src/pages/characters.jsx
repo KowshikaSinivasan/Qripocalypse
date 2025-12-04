@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
+import PersonaSelector from '../components/PersonaSelector';
+import PremiumDialog from '../components/PremiumDialog';
 
 const Characters = () => {
+  const [selectedPersona, setSelectedPersona] = useState('');
+  const [showPremiumDialog, setShowPremiumDialog] = useState(false);
+
   const characters = [
     {
+      id: 'dracula',
       name: 'Count Dracula',
       role: 'Deletion Specialist',
       icon: '🧛',
+      emoji: '🧛',
       color: 'red',
       description: 'Master of removing code and draining the life from bugs',
       personality: 'Elegant, ancient, and precise. He hates messy code.',
@@ -13,9 +20,11 @@ const Characters = () => {
       quote: 'This line... it must be eliminated.'
     },
     {
+      id: 'frankenstein',
       name: 'Frankenstein\'s Monster',
       role: 'Modification Expert',
       icon: '🧟',
+      emoji: '🧟',
       color: 'green',
       description: 'Patches together code from different parts to create new features',
       personality: 'Misunderstood but brilliant. Sees beauty in broken things.',
@@ -23,9 +32,11 @@ const Characters = () => {
       quote: 'Friend? Or bug?'
     },
     {
+      id: 'witch',
       name: 'Witch of Mutations',
       role: 'Conflict Resolver',
       icon: '🧙‍♀️',
+      emoji: '🧙‍♀️',
       color: 'purple',
       description: 'Brews powerful spells to resolve merge conflicts and code disputes',
       personality: 'Mysterious and powerful. Speaks in riddles and code.',
@@ -33,9 +44,11 @@ const Characters = () => {
       quote: 'This variable curse will spread...'
     },
     {
+      id: 'ghost',
       name: 'Ghost of Commit Past',
       role: 'History Keeper',
       icon: '👻',
+      emoji: '👻',
       color: 'gray',
       description: 'Remembers every commit and can travel through code history',
       personality: 'Nostalgic and wise. Loves telling stories of old code.',
@@ -43,9 +56,11 @@ const Characters = () => {
       quote: 'I remember writing this...'
     },
     {
+      id: 'reaper',
       name: 'The Reaper',
       role: 'Code Execution',
       icon: '💀',
+      emoji: '💀',
       color: 'black',
       description: 'Terminates processes and cleans up dead code',
       personality: 'Direct and unforgiving. No patience for inefficiency.',
@@ -53,9 +68,11 @@ const Characters = () => {
       quote: 'Something has died here.'
     },
     {
+      id: 'poltergeist',
       name: 'Poltergeist Debugger',
       role: 'Error Detection',
       icon: '🔮',
+      emoji: '🔮',
       color: 'orange',
       description: 'Finds and reveals hidden bugs and cursed code patterns',
       personality: 'Playful but dangerous. Loves creating chaos to find truth.',
@@ -78,6 +95,15 @@ const Characters = () => {
             Meet the Spirits That Power Qripocalypse
           </p>
         </header>
+
+        {/* Persona Selector */}
+        <div className="flex justify-center mb-12">
+          <PersonaSelector 
+            characters={characters}
+            selectedPersona={selectedPersona}
+            onSelect={setSelectedPersona}
+          />
+        </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {characters.map((character, index) => (
@@ -130,19 +156,26 @@ const Characters = () => {
             SUMMONING RITUAL
           </h2>
           <p className="text-gray-300 mb-6">
-            Visit the QR Portal to generate summoning codes for these characters. 
+            These haunted personas will guide you through your coding journey. 
             They will appear when their specific code patterns are detected in your diffs.
           </p>
-          <div className="flex justify-center gap-4">
-            <button className="bg-purple-900 hover:bg-purple-800 text-white px-6 py-3 rounded-lg font-bold transition-colors">
-              Go to QR Portal
-            </button>
-            <button className="bg-red-900 hover:bg-red-800 text-white px-6 py-3 rounded-lg font-bold transition-colors">
+          <div className="flex justify-center">
+            <button 
+              onClick={() => setShowPremiumDialog(true)}
+              className="bg-red-900 hover:bg-red-800 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+            >
               Learn Summoning Spells
             </button>
           </div>
         </div>
       </div>
+
+      {/* Premium Dialog */}
+      <PremiumDialog 
+        isOpen={showPremiumDialog}
+        onClose={() => setShowPremiumDialog(false)}
+        featureName="Summoning Spells"
+      />
     </div>
   );
 };

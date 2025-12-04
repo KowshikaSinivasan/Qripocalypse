@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import QRGenerator from '../components/QRGenerator';
 import QRScanner from '../qscan';
+import { getRecentSummons, retrieveQRData } from '../services/qrStorageService';
 
 const REDUNDANCY = 3;
 const EXPECTED_GRID_SIZE = 18;
@@ -8,20 +9,16 @@ const EXPECTED_GRID_SIZE = 18;
 const QRPortal = () => {
   const [activeTab, setActiveTab] = useState('generate');
   const [scanning, setScanning] = useState(false);
-  const [recentCodes, setRecentCodes] = useState([
-    { type: 'character', name: 'Dracula', date: '2024-10-31' },
-    { type: 'theme', name: 'Dracula Mode', date: '2024-10-30' },
-    { type: 'diff', name: 'NecroDiff #123', date: '2024-10-29' }
-  ]);
+  const [recentCodes, setRecentCodes] = useState([]);
+  const [scannedData, setScannedData] = useState(null);
+
+  // Load recent summons from localStorage
+  useEffect(() => {
+    const summons = getRecentSummons(20);
+    setRecentCodes(summons);
+  }, []);
 
   const summonOptions = [
-    {
-      type: 'character',
-      title: 'Summon a Character',
-      description: 'Generate QR codes to summon specific haunted personas',
-      icon: '🧛',
-      color: 'red'
-    },
     {
       type: 'theme',
       title: 'Summon a Theme',
@@ -42,16 +39,47 @@ const QRPortal = () => {
       description: 'Create grave QR codes from commit history',
       icon: '⚰️',
       color: 'gray'
+    },
+    {
+      type: 'projectFile',
+      title: 'Summon a Project File',
+      description: 'Generate QR codes for specific project files',
+      icon: '📄',
+      color: 'blue'
+    },
+    {
+      type: 'deployment',
+      title: 'Summon Deployment Info',
+      description: 'Create QR codes with deployment configurations',
+      icon: '🚀',
+      color: 'orange'
     }
   ];
 
-  const handleScanResult = async (objectId) => {
+  const handleScanResult = async (objectId, data) => {
     try {
       console.log('Scanned Object ID:', objectId);
+      setScannedData(data);
+      // Refresh recent summons
+      const summons = getRecentSummons(20);
+      setRecentCodes(summons);
     } catch (error) {
-      setError('Failed to fetch batch details: ' + error.message);
-    } finally {
-      setLoading(false);
+      console.error('Failed to process scan:', error.message);
+    }
+  };
+
+  const handleQRGenerated = (qrInfo) => {
+    // Refresh recent summons when a new QR is generated
+    const summons = getRecentSummons(20);
+    setRecentCodes(summons);
+  };
+
+  const handleResummon = (summonId) => {
+    // Retrieve the QR data and switch to generate tab
+    const qrData = retrieveQRData(summonId);
+    if (qrData) {
+      // Could pass this to QRGenerator to pre-fill, but for now just notify
+      alert(`Resummon feature: Would regenerate QR for ${qrData.type}`);
     }
   };
 
@@ -216,7 +244,7 @@ const QRPortal = () => {
 
               {/* QR Generator */}
               <div className="bg-gray-900/80 backdrop-blur-sm border-2 border-purple-700 rounded-xl p-6">
-                <QRGenerator />
+                <QRGenerator onQRGenerated={handleQRGenerated} />
               </div>
             </div>
           ) : (
@@ -230,6 +258,7 @@ const QRPortal = () => {
                   onStopScan={() => setScanning(false)}
                   processTextFile={processTextFile}
                   decodeGrid={decodeGrid}
+                  scannedData={scannedData}
                 />
               </div>
 
@@ -239,21 +268,33 @@ const QRPortal = () => {
                   Recent Summons
                 </h2>
                 
-                <div className="space-y-4">
-                  {recentCodes.map((code, index) => (
-                    <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-white font-bold">{code.name}</h4>
-                          <p className="text-gray-400 text-sm capitalize">{code.type} • {code.date}</p>
+                {recentCodes.length === 0 ? (
+                  <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 text-center">
+                    <p className="text-gray-400">No recent summons yet. Generate your first QR code!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentCodes.map((code, index) => (
+                      <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{code.icon}</span>
+                            <div>
+                              <h4 className="text-white font-bold">{code.name}</h4>
+                              <p className="text-gray-400 text-sm capitalize">{code.type} • {code.date}</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => handleResummon(code.id)}
+                            className="text-purple-400 hover:text-purple-300 text-sm font-bold transition-colors"
+                          >
+                            RESUMMON
+                          </button>
                         </div>
-                        <button className="text-purple-400 hover:text-purple-300 text-sm font-bold">
-                          RESUMMON
-                        </button>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
