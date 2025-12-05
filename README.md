@@ -71,6 +71,51 @@ src/
 └── register.jsx        # Registration page
 ```
 
+## Application Architecture
+
+### Routing & Authentication
+
+The application uses React Router v7 with protected routes. All routes except `/login` and `/register` require authentication:
+
+**Public Routes:**
+
+- `/login` - User login page
+- `/register` - User registration page
+
+**Protected Routes:**
+
+- `/` - Landing page (main dashboard)
+- `/projects` - Project dashboard
+- `/project/:id/code` - Code editor for specific project
+- `/project/:id/settings` - Project settings and deployment configuration
+- `/necrodiff` - Code diff viewer
+- `/graveyard` - Project archive
+- `/ritual` - Merge conflict resolution
+- `/terminal` - NecroTerminal (Git command simulator)
+- `/qr` - QR code portal
+- `/alerts` - Poltergeist Alerts (code analysis)
+- `/characters` - Haunted character personas
+- `/themes` - Theme management
+- `/settings` - User settings
+- `/about` - About page
+
+### State Management
+
+The app uses React Context API for global state:
+
+- **ProjectProvider**: Wraps the entire application, providing `projectsList` and `setProjectsList` to all components via the `useProjects()` hook
+- **useAuth**: Custom hook for authentication state management (login, logout, token validation)
+- **localStorage**: Automatic persistence for projects, users, configurations, deployments, and metrics
+
+### Authentication Flow
+
+1. User registers/logs in via `authService.jsx`
+2. Password hashed using Web Crypto API (PBKDF2)
+3. Session token generated and stored in localStorage
+4. `useAuth` hook validates token on app load
+5. `ProtectedRoute` component guards authenticated routes
+6. Token stored as `qripocalypse_token` in localStorage
+
 ## Key Components
 
 ### DeploymentPanelTab Component
