@@ -4,54 +4,71 @@ A spooky-themed development platform featuring project management, code editing,
 
 ## Features
 
-- 🧛 **User Authentication** - Register and login with secure password hashing
-- 👻 **Project Management** - Create, manage, and organize haunted projects
+- 🧛 **User Authentication** - Register and login with secure password hashing (PBKDF2)
+- 👻 **Project Management** - Create, manage, and organize haunted projects with ProjectContext
 - 💀 **Code Editor** - In-browser code editor with file management
-- 🔮 **Deployment System** - Multi-platform deployment with monitoring (in development)
-- 🧟 **Haunted UI** - Dark theme with spooky animations and effects
+- 🔮 **Deployment System** - Multi-platform deployment with monitoring (GCP, AWS, Vercel, Render)
+- 🧟 **Git Simulation** - NecroTerminal with project-aware Git commands
+- 📊 **Code Analysis** - NecroDiff viewer and Poltergeist Alerts for code quality
+- 🎨 **Haunted UI** - Dark theme with spooky animations and effects
 
 ## Tech Stack
 
-- **Frontend**: React 18 + Vite
-- **Routing**: React Router v6
-- **Icons**: Lucide React
-- **Storage**: LocalStorage (client-side persistence)
-- **Styling**: CSS with custom haunted theme
+- **Frontend**: React 19.1.1 + Vite 7.x
+- **Routing**: React Router DOM v7.9.1
+- **Icons**: Lucide React 0.555.0
+- **QR Codes**: qrcode 1.5.4, react-qr-reader 3.0.0-beta-1
+- **Storage**: LocalStorage (client-side persistence, no backend)
+- **Styling**: Tailwind CSS 4.1.17 with custom haunted theme CSS
 
 ## Project Structure
 
 ```
 src/
 ├── components/          # Reusable React components
-│   ├── projectContext.jsx    # Project state management
-│   ├── ProjectSelector.jsx   # Project dropdown selector with persistence
+│   ├── projectContext.jsx    # Global project state (ProjectProvider, useProjects hook)
+│   ├── ProjectSelector.jsx   # Project dropdown with localStorage persistence
 │   ├── FileSelector.jsx      # File selection modal for project files
-│   ├── ghostpopup.jsx        # Ghost notification component
-│   ├── WatchingGhost.jsx     # Animated ghost component
-│   └── ...
+│   ├── CloudPlatformsTab.jsx # Multi-platform deployment configuration
+│   ├── DeploymentPanelTab.jsx # Deployment history and tracking
+│   ├── DataDogSpiritsTab.jsx # Monitoring and logging interface
+│   ├── MonitoringPanelTab.jsx # Metrics visualization
+│   ├── PersonaSelector.jsx   # Character persona selector
+│   ├── PremiumDialog.jsx     # Premium feature modal
+│   └── ghostpopup.jsx, WatchingGhost.jsx, spellcircle.jsx, tombstone.jsx
 ├── models/             # Data models and type definitions
 │   └── deploymentModels.jsx  # Deployment system data models
-├── pages/              # Page components
-│   ├── landing.jsx           # Landing page
-│   ├── graveyard.jsx         # Project graveyard
-│   ├── necrodiff.jsx         # Diff viewer
-│   └── ...
+├── pages/              # Page-level components (routes)
+│   ├── landing.jsx           # Main landing page after login
+│   ├── graveyard.jsx         # Project graveyard/archive
+│   ├── necrodiff.jsx         # Code diff viewer with file selection
+│   ├── ritual.jsx            # Merge conflict resolution
+│   ├── terminal.jsx          # Git command simulator (NecroTerminal)
+│   ├── qrportal.jsx          # QR code generation and scanning
+│   ├── alerts.jsx            # AI-powered code analysis (Poltergeist Alerts)
+│   ├── characters.jsx        # Haunted character personas
+│   ├── themes.jsx            # Theme management
+│   └── settings.jsx, about.jsx
 ├── services/           # Business logic and API services
-│   ├── authService.jsx       # Authentication logic
-│   ├── storageService.jsx    # LocalStorage operations
+│   ├── authService.jsx       # Registration, login, password hashing, tokens
+│   ├── storageService.jsx    # localStorage CRUD for users
 │   └── qrStorageService.jsx  # QR code data persistence
-├── utils/              # Utility functions
-│   ├── commitGenerator.jsx   # Simulated commit data generation
-│   ├── deploymentUtils.jsx   # Deployment helpers
-│   ├── simulationUtils.jsx   # Simulation logic
-│   ├── storageHelpers.jsx    # localStorage helpers for deployment configs
-│   └── ...
-├── styles/             # Global styles
-│   └── haunted.css           # Haunted theme styles
-├── App.jsx             # Main app component
+├── utils/              # Utility functions and helpers
+│   ├── commitGenerator.jsx   # Generate simulated commit history
+│   ├── simulationUtils.jsx   # Simulate Docker builds, deployments, metrics
+│   ├── storageHelpers.jsx    # Deployment configs, metrics, alerts persistence
+│   ├── alertGenerator.jsx    # Code analysis and alert generation
+│   ├── diffEngine.jsx        # LCS-based diff algorithm
+│   └── qrHandler.jsx, ghostAI.jsx, deploymentUtils.jsx
+├── styles/             # Global CSS files
+│   └── haunted.css           # Spooky theme styles
+├── App.jsx             # Main app with routing and authentication
+├── main.jsx            # React entry point
 ├── dashboard.jsx       # Project dashboard
 ├── codeeditor.jsx      # In-browser code editor
-└── main.jsx            # App entry point
+├── projectsettings.jsx # Project configuration page
+├── login.jsx           # Login page
+└── register.jsx        # Registration page
 ```
 
 ## Key Components
